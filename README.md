@@ -1,7 +1,9 @@
 # PUA Killer
 
-Removes Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser, OneStart,
-ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, and related PUA leftovers.
+A brainless script for removing PUA, made for the brainless masses who install them.
+
+It scrubs Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser, OneStart,
+ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, and their leftovers.
 
 <!-- stats:start -->
 [![Total fetches](https://img.shields.io/badge/total%20fetches-85-2ea44f)](https://script.nep.red/stat)
