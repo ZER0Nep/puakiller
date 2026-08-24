@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$StatsUrl = 'https://script.nep.red/stat',
+    [string]$FallbackUrl = 'https://r.jina.ai/https://script.nep.red/stat',
     [string]$ReadmePath,
     [string]$StatsHtml
 )
@@ -13,13 +14,24 @@ if (-not $ReadmePath) {
 }
 
 if (-not $StatsHtml) {
-    $StatsHtml = (Invoke-WebRequest -Uri $StatsUrl -UseBasicParsing -TimeoutSec 30).Content
+    try {
+        $StatsHtml = (Invoke-WebRequest -Uri $StatsUrl -UseBasicParsing -TimeoutSec 30).Content
+    } catch {
+        # Cloudflare may challenge GitHub-hosted runner IPs. Jina Reader renders
+        # the same public page as plain text; X-No-Cache requests fresh content.
+        Write-Warning "Direct stats request was blocked; using the public text fallback."
+        $StatsHtml = (Invoke-WebRequest -Uri $FallbackUrl -Headers @{ 'X-No-Cache' = 'true' } -UseBasicParsing -TimeoutSec 30).Content
+    }
 }
 
 # Parse only digits from the specifically labelled counter. No endpoint HTML is
 # copied into the repository, so unexpected/malicious content fails closed.
 $counterPattern = '<div[^>]*class="n"[^>]*>\s*(?<count>[\d,\s]+)\s*</div>\s*<div[^>]*class="l"[^>]*>\s*total fetches\s*</div>'
 $counterMatch = [regex]::Match($StatsHtml, $counterPattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+if (-not $counterMatch.Success) {
+    $textPattern = '(?im)^\s*(?<count>[\d,]+)\s*\r?\n\s*total fetches\s*$'
+    $counterMatch = [regex]::Match($StatsHtml, $textPattern)
+}
 if (-not $counterMatch.Success) {
     throw "Could not find the labelled total-fetches counter at $StatsUrl"
 }
