@@ -38,7 +38,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.5.0'
+$ScriptVersion = '1.6.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -108,6 +108,13 @@ function Send-Stat([string]$Phase) {
 #    Nw     = $true to also clean NW.js (nw*) Temp dirs whose manifest matches.
 #    Harden = AppData-relative folders to seal against reinstall under -Harden
 #             (e.g. 'Local\Foo','Roaming\Foo','Local\Programs\Foo').
+#    Aliases = optional additional install-folder names. Unlike Name, aliases
+#             are removed only when a matching filename, hash or signer is
+#             found inside, making short/generic vendor folders safe to cover.
+#    RegNames = optional exact vendor registry-key names removed only when file
+#             or distinctive primary-key evidence for this PUA is present.
+#    Hashes = optional SHA-256 indicators checked in guarded alias folders and
+#             top-level downloaded executables (static hashing; never execute).
 # ============================================================================
 $Puas = @(
     @{ Name='OpenBook';    Label='OpenBook';    Rx='(?i)\bOpenBook\b';    Proc=@('OpenBook');    Pub='';                            Nw=$true;  Harden=@('Local\OpenBook','Roaming\OpenBook') },
@@ -142,6 +149,14 @@ $Puas = @(
     # process is onestart.exe, killed above) and no Pub (signer rotates; the cert sweep + OneStart Pub cover that).
     @{ Name='ProOneStartHub'; Label='ProOneStartHub'; Rx='(?i)(ProOneStartHub|ProOneStartPDF)'; Proc=@(); Pub=''; Nw=$false; Harden=@('Local\ProOneStartHub','Roaming\ProOneStartHub','Local\Programs\ProOneStartHub') },
 
+    # OneBrowser - Chromium-based PUA in the TamperedChef-adjacent ecosystem. Palo Alto Unit 42 tracks WORK PRODUCT, INC.
+    # as a OneBrowser signer. Installs under %LOCALAPPDATA%\OB or \OneBrowser (also %ProgramFiles%\OB); persistence uses
+    # OBUpdate / OneBUpdate tasks, OneBrowser App Paths, Software\OB / Software\OneBrowser, and OBUpdateService.exe or
+    # OneBUpdateService.exe. The short "OB" folder is guarded by static filename/hash/signer evidence to avoid false positives.
+    # User-supplied Joe Sandbox sample (never executed here): SHA256 fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957;
+    # signer CN=Work Product Inc., cert SHA256 96459CC59004DD82885E3AEBACD5A9AD869AC517D5E2A4FEC8BCC417D6BB8705.
+    @{ Name='OneBrowser'; Label='OneBrowser'; Rx='(?i)(\bOneBrowser\b|\bOneB(?:rowser)?Update(?:Service)?\b|\bOBUpdate(?:Service)?\b)'; Proc=@('OneBrowser','OBUpdateService','OneBUpdateService'); Pub='(?i)Work\s*Product\s*,?\s*Inc\.?'; Nw=$false; Harden=@('Local\OneBrowser','Local\Programs\OneBrowser'); Aliases=@('OB'); RegNames=@('OneBrowser','OB'); Hashes=@('fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957') },
+
     # ManualFinder / ManualFinderApp / AllManualsFinder - trojanized "find product manuals" installer; TamperedChef/AppSuite/BaoLoader,
     # SAME operators as OneStart (G DATA/Expel/Sophos; shared C2 mka3e8.com). NOT mere adware: infostealer/loader (Chromium cred+cookie
     # theft, residential proxy) - treat a hit as a COMPROMISE IOC. ManualFinderApp.exe signed by "GLINT SOFTWARE SDN. BHD." (revoked).
@@ -173,7 +188,9 @@ $BadSigners = @(
     'Byte Media Sdn',
     'OneStart Technologies',
     'Caerus Media',
-    'VAST LAKE'
+    'VAST LAKE',
+    'Work Product Inc.',
+    'WORK PRODUCT, INC.'
 )
 $BadSignerRx = '(?i)(' + (($BadSigners | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')'
 
@@ -366,8 +383,39 @@ function Invoke-Action {
     }
 }
 
+function Test-PuaFileHash([string]$Path, [string[]]$Hashes) {
+    if (-not $Path -or -not $Hashes -or $Hashes.Count -eq 0) { return $false }
+    try {
+        $hash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
+        return [bool]($hash -and ($Hashes -contains $hash))
+    } catch { return $false }
+}
+
+function Test-PuaAliasDir {
+    param([string]$Path,[string]$Rx,[string[]]$Proc,[string]$Pub,[string[]]$Hashes)
+    if (-not (Test-Path -LiteralPath $Path -PathType Container -ErrorAction SilentlyContinue)) { return $false }
+    try {
+        # Bounded, static inspection only. Reading metadata, signatures and hashes
+        # never loads or executes a candidate binary.
+        $files = @(Get-ChildItem -LiteralPath $Path -Recurse -File -Filter *.exe -Force -ErrorAction SilentlyContinue | Select-Object -First 32)
+        foreach ($file in $files) {
+            if (($Proc -contains $file.BaseName) -or ($file.Name -match $Rx)) { return $true }
+            if (Test-PuaFileHash -Path $file.FullName -Hashes $Hashes) { return $true }
+        }
+        if ($Pub) {
+            foreach ($file in ($files | Select-Object -First 12)) {
+                try {
+                    $sig = Get-AuthenticodeSignature -LiteralPath $file.FullName -ErrorAction SilentlyContinue
+                    if ($sig.SignerCertificate -and ($sig.SignerCertificate.Subject -match $Pub)) { return $true }
+                } catch {}
+            }
+        }
+    } catch {}
+    return $false
+}
+
 function Invoke-PuaSweep {
-    param([string]$Name,[string]$Rx,[string[]]$Proc,[string[]]$Dirs,[string]$Pub = '',[bool]$Nw = $false)
+    param([string]$Name,[string]$Rx,[string[]]$Proc,[string[]]$Dirs,[string[]]$RegPaths,[string[]]$Hashes,[string]$Pub = '',[bool]$Nw = $false)
 
     Section "Removing $Name (PUA) - processes"
     $sweepPasses = if ($DryRun) { 1 } else { 2 }
@@ -453,6 +501,11 @@ function Invoke-PuaSweep {
             if ($nm -match $Rx) { $kp = "$cr\$nm"; Invoke-Action "class $nm" { if (-not (Remove-RegForce $kp)) { throw 'key remained' } } }
         }
     }
+    foreach ($regPath in ($RegPaths | Select-Object -Unique)) {
+        if (Test-Path -LiteralPath $regPath -ErrorAction SilentlyContinue) {
+            Invoke-Action "vendor key $regPath" { if (-not (Remove-RegForce $regPath)) { throw 'key remained' } }
+        }
+    }
 
     Section "Removing $Name (PUA) - uninstall entries"
     $unList = New-Object System.Collections.Generic.List[string]
@@ -499,8 +552,11 @@ function Invoke-PuaSweep {
     foreach ($u in $userRoots) {
         $dl = Join-Path $u 'Downloads'
         if (-not (Test-Path -LiteralPath $dl -ErrorAction SilentlyContinue)) { continue }
-        Get-ChildItem -LiteralPath $dl -Filter *.exe -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $Rx } | ForEach-Object {
-            Invoke-Action "dropper $($_.FullName)" { if (-not (Remove-PathForce $_.FullName)) { throw 'in use - could not remove' } }
+        Get-ChildItem -LiteralPath $dl -Filter *.exe -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $dropper = $_
+            if (($dropper.Name -match $Rx) -or (Test-PuaFileHash -Path $dropper.FullName -Hashes $Hashes)) {
+                Invoke-Action "dropper $($dropper.FullName)" { if (-not (Remove-PathForce $dropper.FullName)) { throw 'in use - could not remove' } }
+            }
         }
     }
     $tmpRoots = @($env:TEMP)
@@ -881,17 +937,48 @@ foreach ($u in $userRoots) {
 # PUA definitions live in the $Puas registry near the top of this script.
 foreach ($pua in $Puas) {
     $pd = New-Object System.Collections.Generic.List[string]
+    $guarded = New-Object System.Collections.Generic.List[string]
+    $evidence = $false
     foreach ($u in $userRoots) {
         $pd.Add((Join-Path $u "AppData\Local\$($pua.Name)"))
         $pd.Add((Join-Path $u "AppData\Roaming\$($pua.Name)"))
         $pd.Add((Join-Path $u "AppData\Local\Programs\$($pua.Name)"))
         $pd.Add((Join-Path $u "AppData\Roaming\Microsoft\Windows\Start Menu\Programs\$($pua.Name)"))
+        foreach ($alias in $pua.Aliases) {
+            $guarded.Add((Join-Path $u "AppData\Local\$alias"))
+            $guarded.Add((Join-Path $u "AppData\Roaming\$alias"))
+            $guarded.Add((Join-Path $u "AppData\Local\Programs\$alias"))
+        }
     }
     if ($env:ProgramFiles)        { $pd.Add((Join-Path $env:ProgramFiles $pua.Name)) }
     if (${env:ProgramFiles(x86)}) { $pd.Add((Join-Path ${env:ProgramFiles(x86)} $pua.Name)) }
     if ($env:ProgramData)         { $pd.Add((Join-Path $env:ProgramData $pua.Name)); $pd.Add((Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\$($pua.Name)")) }
+    foreach ($alias in $pua.Aliases) {
+        if ($env:ProgramFiles)        { $guarded.Add((Join-Path $env:ProgramFiles $alias)) }
+        if (${env:ProgramFiles(x86)}) { $guarded.Add((Join-Path ${env:ProgramFiles(x86)} $alias)) }
+        if ($env:ProgramData)         { $guarded.Add((Join-Path $env:ProgramData $alias)) }
+    }
+    if ($pua.RegNames) {
+        foreach ($d in $pd) { if (Test-Path -LiteralPath $d -ErrorAction SilentlyContinue) { $evidence = $true; break } }
+        foreach ($d in ($guarded | Select-Object -Unique)) {
+            if (Test-PuaAliasDir -Path $d -Rx $pua.Rx -Proc $pua.Proc -Pub $pua.Pub -Hashes $pua.Hashes) {
+                $pd.Add($d); $evidence = $true
+            }
+        }
+        $regPaths = New-Object System.Collections.Generic.List[string]
+        $regRoots = New-Object System.Collections.Generic.List[string]
+        $regRoots.Add('HKLM:\Software'); $regRoots.Add('HKLM:\Software\WOW6432Node')
+        foreach ($r in $softwareHiveRoots) { $regRoots.Add("$r\Software"); $regRoots.Add("$r\Software\WOW6432Node") }
+        foreach ($root in $regRoots) {
+            foreach ($regName in $pua.RegNames) {
+                $regPath = "$root\$regName"; $regPaths.Add($regPath)
+                if ($regName -ieq $pua.Name -and (Test-Path -LiteralPath $regPath -ErrorAction SilentlyContinue)) { $evidence = $true }
+            }
+        }
+        $pua.RegPaths = if ($evidence) { $regPaths } else { @() }
+    } else { $pua.RegPaths = @() }
     $pua.Dirs = $pd
-    Invoke-PuaSweep -Name $pua.Name -Rx $pua.Rx -Proc $pua.Proc -Dirs $pua.Dirs -Pub $pua.Pub -Nw $pua.Nw
+    Invoke-PuaSweep -Name $pua.Name -Rx $pua.Rx -Proc $pua.Proc -Dirs $pua.Dirs -RegPaths $pua.RegPaths -Hashes $pua.Hashes -Pub $pua.Pub -Nw $pua.Nw
 }
 
 # ---------------------------------------------------------------------------
@@ -1016,6 +1103,7 @@ Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
 
 foreach ($pua in $Puas) {
     foreach ($d in ($pua.Dirs | Select-Object -Unique)) { if (Test-Path -LiteralPath $d -ErrorAction SilentlyContinue) { $residual += "dir: $d" } }
+    foreach ($r in ($pua.RegPaths | Select-Object -Unique)) { if (Test-Path -LiteralPath $r -ErrorAction SilentlyContinue) { $residual += "reg: $r" } }
     if ($hasSchedCmd) {
         Get-ScheduledTask -ErrorAction SilentlyContinue |
             Where-Object { (($_.TaskName + $_.TaskPath) -match $pua.Rx) } |

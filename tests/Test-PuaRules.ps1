@@ -80,6 +80,14 @@ function Match-FolderName([string]$name) {# exact install-folder sweep (driven b
     foreach ($p in $Puas) { if ($p.Name -and ($p.Name -ieq $name)) { return $p.Name } }
     return $null
 }
+function Match-Alias([string]$name) {     # guarded folder alias (requires on-disk evidence)
+    foreach ($p in $Puas) { if ($p.Aliases -and ($p.Aliases -contains $name)) { return $p.Name } }
+    return $null
+}
+function Match-Hash([string]$hash) {
+    foreach ($p in $Puas) { if ($p.Hashes -and ($p.Hashes -contains $hash)) { return $p.Name } }
+    return $null
+}
 function Match-Signer([string]$subject) { return [bool]($subject -match $BadSignerRx) }
 
 # ===========================================================================
@@ -96,7 +104,8 @@ $BENIGN_NAMES = @(
   'OpenSSL','PuTTY','WinRAR','iTunes','Epic Games','NVIDIA','Intel','Docker','Postman',
   'Figma','Notepad++','Sublime Text','JetBrains','Audacity','HandBrake','ShareX',
   'Invoices','Tax2024','Resume','Family Photos','Minecraft','MyConverterNotes','ManualsLib',
-  'Recipe Setup.exe','RecipeKeeper','My Recipe Box','Paprika Recipe Manager','MyRecipeSetup.exe'
+  'Recipe Setup.exe','RecipeKeeper','My Recipe Box','Paprika Recipe Manager','MyRecipeSetup.exe',
+  'OB','OBS Studio','Object Browser','One Browser Tab','OneBrowserNotes'
 )
 # Legitimate / OS process names that must NEVER appear in a PUA's Proc kill list.
 $BENIGN_PROCS = @(
@@ -109,7 +118,8 @@ $BENIGN_PUBLISHERS = @(
   'Microsoft Corporation','Google LLC','Mozilla Corporation','Adobe Inc.',
   'Foxit Software Incorporated','Brave Software, Inc.','Valve','Notion Labs, Inc.',
   'Slack Technologies, Inc.','Apple Inc.','Dropbox, Inc.','NVIDIA Corporation',
-  'Intel Corporation','Python Software Foundation','GitHub, Inc.','Igor Pavlov','VideoLAN'
+  'Intel Corporation','Python Software Foundation','GitHub, Inc.','Igor Pavlov','VideoLAN',
+  'Work Product Solutions LLC'
 )
 
 # Known cluster artifacts that MUST be detected (regression guard).
@@ -120,18 +130,24 @@ $MAL_RX = @(
   'C:\Users\x\AppData\Local\OneStart.ai\OneStart\Application\onestart.exe',
   'ProOneStartHub','ProOneStartPDF','proonestarthub.msi','proonestartpdf.msi',
   'C:\Users\x\AppData\Local\Programs\ProOneStartHub\onestart.exe',
+  'OneBrowser','OneBrowser.exe','OBUpdate','OneBUpdate','OBUpdateService.exe','OneBUpdateService.exe',
+  'C:\Users\x\AppData\Local\OB\Application\137.0.7151.69\OneBrowser.exe',
   'ManualFinder','ManualFinderApp','AllManualsReader','OpenMyManual','ManualReaderPro',
   'TotalUserManuals','PDFEditorUpdater','OpenBook','ConvertMate','PDFEditor',
   'KitchenCanvas','KitchenCanvas-Setup-3.4.exe','RecipeSetup_275522.exe','KitchenCanvas_239364.exe',
   'C:\Users\x\AppData\Local\Programs\KitchenCanvas\KitchenCanvas.exe'
 )
 $MAL_PULSE = @('PulseBrowser','Pulse Browser','PulseSoftware','Pulse Software')
-$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor')
-$MAL_PROCS = @('epibrowser','onestart','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor')
+$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor')
+$MAL_ALIASES = @('OB')
+$MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor')
+$MAL_HASHES = @('fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957')
 $MAL_PUBLISHERS = @(
   'GLINT SOFTWARE SDN. BHD.','ECHO INFINI SDN. BHD.','Byte Media Sdn. Bhd.',
   'OneStart Technologies LLC','SUMMIT NEXUS Holdings LLC','VAST LAKE LTD','Caerus Media LLC',
-  'CN=GLINT SOFTWARE SDN. BHD., O=GLINT SOFTWARE SDN. BHD., L=Skudai, S=Johor, C=MY'
+  'CN=GLINT SOFTWARE SDN. BHD., O=GLINT SOFTWARE SDN. BHD., L=Skudai, S=Johor, C=MY',
+  'CN=Work Product Inc., O=Work Product Inc., L=Golden, S=Colorado, C=US',
+  'CN=WORK PRODUCT, INC., O=WORK PRODUCT, INC., C=US'
 )
 
 # ===========================================================================
@@ -158,14 +174,17 @@ Write-Host "== DETECTION: known cluster artifacts must be matched ==" -Foregroun
 foreach ($s in $MAL_RX)        { Check ([bool](Match-Rx $s))         "artifact '$s' not matched by any Rx" }
 foreach ($s in $MAL_PULSE)     { Check ([bool]($s -match $PulseRegex)) "Pulse artifact '$s' not matched by PulseRegex" }
 foreach ($s in $MAL_FOLDERS)   { Check ([bool](Match-FolderName $s)) "PUA folder '$s' not covered by an install-folder sweep" }
+foreach ($s in $MAL_ALIASES)   { Check ([bool](Match-Alias $s))      "PUA guarded folder alias '$s' not covered" }
 foreach ($s in $MAL_PROCS)     { Check ([bool](Match-Proc $s))       "PUA process '$s' not in any kill list" }
+foreach ($s in $MAL_HASHES)    { Check ([bool](Match-Hash $s))       "PUA SHA-256 '$s' not registered" }
 foreach ($s in $MAL_PUBLISHERS){ Check (Match-Signer $s)             "abused signer '$s' not matched by BadSignerRx" }
+Check (-not (Match-FolderName 'OB')) "short OneBrowser alias 'OB' must not be an unconditional install-folder Name"
 
 Write-Host "== PARITY: both scripts must define identical rules ==" -ForegroundColor Cyan
 $PuasL  = @(Get-ScriptVar -Path $Local -VarName 'Puas')
 $BadL   = @(Get-ScriptVar -Path $Local -VarName 'BadSigners')
 $PulseL = Get-ScriptVar -Path $Local -VarName 'PulseRegex'
-function Norm($puas) { ($puas | ForEach-Object { '{0}|{1}|{2}|{3}|{4}|{5}' -f $_.Name,$_.Rx,(($_.Proc) -join ','),$_.Pub,$_.Nw,(($_.Harden) -join ',') }) -join "`n" }
+function Norm($puas) { ($puas | ForEach-Object { '{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}' -f $_.Name,$_.Rx,(($_.Proc) -join ','),$_.Pub,$_.Nw,(($_.Harden) -join ','),(($_.Aliases) -join ','),(($_.RegNames) -join ','),(($_.Hashes) -join ',') }) -join "`n" }
 Check ((Norm $Puas) -eq (Norm $PuasL))                   "`$Puas differs between hosted-removal.ps1 and PUAKILLER-LOCAL.ps1"
 Check ((($BadSigners) -join ',') -eq (($BadL) -join ',')) "`$BadSigners differs between the two scripts"
 Check ($PulseRegex -eq $PulseL)                          "`$PulseRegex differs between the two scripts"

@@ -6,7 +6,8 @@ scheduled tasks, services, COM/registry persistence, install folders, shortcuts,
 droppers, and known abused-certificate artifacts.
 
 Current rules cover Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser,
-OneStart, ProOneStartHub/ProOneStartPDF, ManualFinder variants, and KitchenCanvas.
+OneStart, ProOneStartHub/ProOneStartPDF, OneBrowser, ManualFinder variants, and
+KitchenCanvas.
 
 <!-- stats:start -->
 [![Total fetches](https://img.shields.io/badge/total%20fetches-78-2ea44f)](https://script.nep.red/stat)

@@ -65,3 +65,10 @@ An offline fixture test for the README fetch counter. It verifies that the updat
 extracts only the labelled numeric value, URL-encodes the badge count, preserves
 content outside the marker block, and fails closed when the endpoint HTML is not in
 the expected format.
+
+## `Test-OneBrowserGuard.ps1`
+
+A harmless-fixture test for OneBrowser's short `OB` install-folder alias. It
+loads only the two static evidence helpers, never the removal script, and proves
+that an unrelated `OB` folder is preserved while a matching executable name or
+registered SHA-256 is detected. No malware sample is downloaded or executed.

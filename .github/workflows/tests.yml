@@ -50,6 +50,10 @@ jobs:
         shell: powershell
         run: .\tests\Test-StatsUpdater.ps1
 
+      - name: OneBrowser guarded-folder tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-OneBrowserGuard.ps1
+
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
@@ -57,3 +61,7 @@ jobs:
       - name: Stats updater tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-StatsUpdater.ps1
+
+      - name: OneBrowser guarded-folder tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-OneBrowserGuard.ps1
