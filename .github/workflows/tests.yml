@@ -1,0 +1,51 @@
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    name: PUA rules + safety
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse-check all scripts (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $bad = 0
+          Get-ChildItem -Path . -Recurse -Filter *.ps1 | ForEach-Object {
+            $e = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$e)
+            if ($e.Count) {
+              Write-Host "PARSE FAIL: $($_.FullName)" -ForegroundColor Red
+              $e | ForEach-Object { Write-Host "  $($_.Message)" }
+              $bad = 1
+            } else { Write-Host "parse OK: $($_.Name)" }
+          }
+          if ($bad) { exit 1 }
+
+      - name: PowerShell 5.1 compatibility lint
+        shell: powershell
+        run: |
+          # The removal scripts self-relaunch and run on stock Windows 10/11 (Windows PowerShell 5.1),
+          # so they must avoid PowerShell 7-only constructs. These two bit us once already.
+          $patterns = @('-Depth\s', 'Sort-Object\s*\{', 'ForEach-Object\s+-Parallel', '-Parallel\s')
+          $bad = 0
+          foreach ($f in 'hosted-removal.ps1','PUAKILLER-LOCAL.ps1') {
+            $txt = Get-Content -Raw $f
+            foreach ($p in $patterns) {
+              if ($txt -match $p) { Write-Host "PS5.1-incompatible pattern '$p' found in $f" -ForegroundColor Red; $bad = 1 }
+            }
+          }
+          if ($bad) { exit 1 } else { Write-Host "OK: no PowerShell 7-only constructs" }
+
+      - name: PUA rule + safety tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-PuaRules.ps1
+
+      - name: PUA rule + safety tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-PuaRules.ps1

@@ -6,6 +6,8 @@ param(
     [switch]$NoElevate,
     [switch]$Harden,
     [switch]$SkipCertScan,
+    [switch]$NoStats,
+    [ValidatePattern('^[A-Za-z0-9._-]{1,128}$')]
     [string]$StatId,
     [string]$LogPath
 )
@@ -24,14 +26,17 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
             if ($Headless)  { $reArgs += '-Headless' } elseif ($Run) { $reArgs += '-Run' }
             if ($NoElevate) { $reArgs += '-NoElevate' }
             if ($Harden)    { $reArgs += '-Harden' }
-            if ($StatId)    { $reArgs += @('-StatId',$StatId) }
+            if ($SkipCertScan) { $reArgs += '-SkipCertScan' }
+            if ($NoStats)   { $reArgs += '-NoStats' }
+            if ($StatId)    { $reArgs += @('-StatId',"`"$StatId`"") }
+            if ($LogPath)   { $reArgs += @('-LogPath',"`"$LogPath`"") }
             Start-Process -FilePath $ps64 -ArgumentList $reArgs -Wait
             return
         } catch {}
     }
 }
 
-$ScriptVersion = '1.3.2'
+$ScriptVersion = '1.4.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = 'https://script.nep.red/stat'
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -52,6 +57,7 @@ function Test-Admin {
 }
 
 function Send-Stat([string]$Phase) {
+    if ($NoStats -or -not $StatsUrl) { return }
     try {
         $payload = @{
             v        = $ScriptVersion
@@ -61,6 +67,7 @@ function Send-Stat([string]$Phase) {
             headless = [bool]$Headless
             noelev   = [bool]$NoElevate
             harden   = [bool]$Harden
+            certscan = [bool](-not $SkipCertScan)
             admin    = (Test-Admin)
             removed  = $script:Removed
             errors   = $script:Errors
@@ -140,7 +147,16 @@ $Puas = @(
     # Programs\ManualFinder}; persistence = scheduled task -> node.exe runs a GUID .js in %TEMP%. Siblings under Programs\:
     # AllManualsReader/OpenMyManual/ManualReaderPro/TotalUserManuals (caught by Rx). Full SHA256: app 71edb9f9..c2a51, MSI ed797beb..b2871.
     # Generic loader processes (node/msiexec/mshta/powershell/cmd/svchost) are NOT in Proc - OS/legit; malicious node.exe caught by path-Rx.
-    @{ Name='ManualFinder'; Label='ManualFinder'; Rx='(?i)(manualfinder|allmanualsfinder|allmanualsreader|openmymanual|manualreaderpro|totalusermanuals|pdfeditorupdater)'; Proc=@('ManualFinderApp','AllManualsReader','OpenMyManual','ManualReaderPro','TotalUserManuals'); Pub='(?i)(GLINT SOFTWARE SDN\.? BHD|GLINT By J SDN\.? BHD|ECHO\s*INFINI SDN\.? BHD|SUMMIT NEXUS Holdings)'; Nw=$false; Harden=@('Local\ManualFinder','Local\Programs\ManualFinder','Roaming\ManualFinder') }
+    @{ Name='ManualFinder'; Label='ManualFinder'; Rx='(?i)(manualfinder|allmanualsfinder|allmanualsreader|openmymanual|manualreaderpro|totalusermanuals|pdfeditorupdater)'; Proc=@('ManualFinderApp','AllManualsReader','OpenMyManual','ManualReaderPro','TotalUserManuals'); Pub='(?i)(GLINT SOFTWARE SDN\.? BHD|GLINT By J SDN\.? BHD|ECHO\s*INFINI SDN\.? BHD|SUMMIT NEXUS Holdings)'; Nw=$false; Harden=@('Local\ManualFinder','Local\Programs\ManualFinder','Roaming\ManualFinder') },
+
+    # KitchenCanvas - fake "AI meal-planner / recipe" app; TamperedChef/AppSuite cluster (Sophos/Unit42/Truesec/any.run/Joe Sandbox).
+    # Google malvertising from kitchen-canvas.com -> CloudFront CDN (e.g. d1q9yii5cruf0d.cloudfront.net/KitchenCanvas-Setup-<ver>.exe),
+    # saved locally as RecipeSetup_<digits>.exe - a per-download RANDOMIZED installer name with NO "KitchenCanvas" in it, so the Rx must
+    # catch BOTH the installed app (KitchenCanvas) AND the RecipeSetup dropper. \bRecipeSetup[-_] is anchored to the cluster's _/- suffix
+    # so it can't hit a legit "Recipe Setup.exe". Loader: enumerates browser/proxy/installed-programs, scheduled-task + startup
+    # persistence, lies dormant for weeks, then pulls stealer/RAT/proxyware. Process KitchenCanvas.exe; install %LOCALAPPDATA%\Programs\
+    # KitchenCanvas. Signer rotates (cert sweep covers it); no Pub pinned. Variants KitchenCanvas_<digits>.exe in the sandboxes.
+    @{ Name='KitchenCanvas'; Label='KitchenCanvas'; Rx='(?i)(\bKitchenCanvas|\bRecipeSetup[-_])'; Proc=@('KitchenCanvas'); Pub=''; Nw=$false; Harden=@('Local\KitchenCanvas','Roaming\KitchenCanvas','Local\Programs\KitchenCanvas') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
@@ -182,9 +198,17 @@ if (-not $DryRun -and -not $Run) {
 if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
     try {
         $modeArg = if ($Headless) { '-Headless' } else { '-Run' }
-        $extra   = @('-StatId',$RunId)
+        $extra   = @('-StatId',"`"$RunId`"")
         if ($Harden) { $extra += '-Harden' }
+        if ($SkipCertScan) { $extra += '-SkipCertScan' }
+        if ($NoStats) { $extra += '-NoStats' }
+        if ($LogPath) { $extra += @('-LogPath',"`"$LogPath`"") }
         $hardStr = if ($Harden) { ' -Harden' } else { '' }
+        $skipCertStr = if ($SkipCertScan) { ' -SkipCertScan' } else { '' }
+        $noStatsStr = if ($NoStats) { ' -NoStats' } else { '' }
+        $logLiteral = if ($LogPath) { "'" + $LogPath.Replace("'", "''") + "'" } else { "''" }
+        $logStr = if ($LogPath) { " -LogPath $logLiteral" } else { '' }
+        $runIdLiteral = "'" + $RunId.Replace("'", "''") + "'"
         $launch  = $null
         if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath -ErrorAction SilentlyContinue)) {
             $launch = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",$modeArg) + $extra
@@ -197,7 +221,7 @@ if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
                 $launch = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$selfPath`"",$modeArg) + $extra
             } else {
                 $boot = Join-Path $env:TEMP 'PUAKILLER-boot.ps1'
-                "& ([scriptblock]::Create((Invoke-RestMethod -Uri '$ScriptUrl' -TimeoutSec 30))) $modeArg -StatId '$RunId'$hardStr" |
+                "& ([scriptblock]::Create((Invoke-RestMethod -Uri '$ScriptUrl' -TimeoutSec 30))) $modeArg -StatId $runIdLiteral$hardStr$skipCertStr$noStatsStr$logStr" |
                     Out-File -FilePath $boot -Encoding UTF8 -Force
                 $launch = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$boot`"")
             }
@@ -254,6 +278,35 @@ function Get-RegSubKeys([string]$path) {
         if (-not $k) { return @() }
         $n = $k.GetSubKeyNames(); $k.Close(); return $n
     } catch { return @() }
+}
+
+function Get-RegDefaultValue([string]$path) {
+    try {
+        $base = $null; $sub = ''
+        if     ($path -match '^HKLM:\\(.+)$')                            { $base = [Microsoft.Win32.Registry]::LocalMachine; $sub = $Matches[1] }
+        elseif ($path -match '^HKCU:\\(.+)$')                            { $base = [Microsoft.Win32.Registry]::CurrentUser;  $sub = $Matches[1] }
+        elseif ($path -match '(?:Registry::)?HKEY_USERS\\(.+)$')         { $base = [Microsoft.Win32.Registry]::Users;        $sub = $Matches[1] }
+        elseif ($path -match '(?:Registry::)?HKEY_LOCAL_MACHINE\\(.+)$') { $base = [Microsoft.Win32.Registry]::LocalMachine; $sub = $Matches[1] }
+        if (-not $base) { return $null }
+        $k = $base.OpenSubKey($sub)
+        if (-not $k) { return $null }
+        try { return [string]$k.GetValue('') } finally { $k.Close() }
+    } catch { return $null }
+}
+
+function Test-RegKey([string]$path) {
+    try {
+        $base = $null; $sub = ''
+        if     ($path -match '^HKLM:\\(.+)$')                            { $base = [Microsoft.Win32.Registry]::LocalMachine; $sub = $Matches[1] }
+        elseif ($path -match '^HKCU:\\(.+)$')                            { $base = [Microsoft.Win32.Registry]::CurrentUser;  $sub = $Matches[1] }
+        elseif ($path -match '(?:Registry::)?HKEY_USERS\\(.+)$')         { $base = [Microsoft.Win32.Registry]::Users;        $sub = $Matches[1] }
+        elseif ($path -match '(?:Registry::)?HKEY_LOCAL_MACHINE\\(.+)$') { $base = [Microsoft.Win32.Registry]::LocalMachine; $sub = $Matches[1] }
+        if (-not $base) { return $false }
+        $k = $base.OpenSubKey($sub)
+        if (-not $k) { return $false }
+        $k.Close()
+        return $true
+    } catch { return $false }
 }
 
 function Section([string]$t) {
@@ -697,24 +750,22 @@ foreach ($c in $classContainers) {
         $root = "$c\$leaf"
         foreach ($g in $PulseGuids) {
             $kp = "$root\{$g}"
-            if (Test-Path -LiteralPath $kp -ErrorAction SilentlyContinue) {
+            if (Test-RegKey $kp) {
                 Invoke-Action "COM $kp" { if (-not (Remove-RegForce $kp)) { throw "key remained" } }
             }
         }
     }
     foreach ($tl in @("$c\TypeLib","$c\Wow6432Node\TypeLib")) {
-        if (-not (Test-Path $tl -ErrorAction SilentlyContinue)) { continue }
-        Get-ChildItem -LiteralPath $tl -ErrorAction SilentlyContinue | ForEach-Object {
-            $sub = $_; $remove = (Test-IsPulseGuid $sub.PSChildName)
+        foreach ($name in (Get-RegSubKeys $tl)) {
+            $subPath = "$tl\$name"
+            $remove = (Test-IsPulseGuid $name)
             if (-not $remove) {
-                try {
-                    $def = (Get-ItemProperty -LiteralPath $sub.PSPath -ErrorAction SilentlyContinue).'(default)'
-                    if ($def -and ($def -match $PulseRegex)) { $remove = $true }
-                } catch {}
+                $def = Get-RegDefaultValue $subPath
+                if ($def -and ($def -match $PulseRegex)) { $remove = $true }
             }
             if ($remove) {
-                $disp = $sub.PSPath -replace '^Microsoft\.PowerShell\.Core\\Registry::',''
-                Invoke-Action "TypeLib $disp" { if (-not (Remove-RegForce $sub.PSPath)) { throw "key remained" } }
+                $disp = $subPath -replace '^Microsoft\.PowerShell\.Core\\Registry::',''
+                Invoke-Action "TypeLib $disp" { if (-not (Remove-RegForce $subPath)) { throw "key remained" } }
             }
         }
     }
