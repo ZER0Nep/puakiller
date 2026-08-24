@@ -38,8 +38,11 @@ $script = irm $uri -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-c
 & ([scriptblock]::Create($script)) -DryRun -NoStats
 ```
 
-The script asks for elevation when system-wide cleanup is needed. Review the log
-at `$env:TEMP\PUAKILLER.log` after a run.
+The script asks for elevation when system-wide cleanup is needed. By default it
+appends to `C:\ProgramData\PUAKILLER\Logs\PUAKILLER.log`, including when it runs
+as `SYSTEM`. The startup banner prints the actual path used. If that location is
+not writable, the script falls back to Windows Temp and then the current account's
+Temp directory.
 
 Useful options:
 
@@ -49,7 +52,7 @@ Useful options:
 - `-NoElevate`: limit cleanup to the current user's accessible scope.
 - `-SkipCertScan`: skip the broader known-abused-certificate scan.
 - `-NoStats`: disable the hosted script's anonymous operational statistics.
-- `-LogPath <path>`: write the transcript to a custom location.
+- `-LogPath <path>`: append the transcript to a custom location.
 
 The hosted script reports a random run ID, script/PowerShell/Windows versions,
 selected mode flags, privilege state, and removal/error counts to

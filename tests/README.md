@@ -72,3 +72,10 @@ A harmless-fixture test for OneBrowser's short `OB` install-folder alias. It
 loads only the two static evidence helpers, never the removal script, and proves
 that an unrelated `OB` folder is preserved while a matching executable name or
 registered SHA-256 is detected. No malware sample is downloaded or executed.
+
+## `Test-Logging.ps1`
+
+Checks that both scripts prefer the shared `ProgramData` log location, retain
+identical append/fallback behavior, and never regress to a profile-specific Temp
+default. It executes only the isolated transcript helper against a unique harmless
+Temp fixture, then removes that fixture.

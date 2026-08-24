@@ -54,6 +54,10 @@ jobs:
         shell: powershell
         run: .\tests\Test-OneBrowserGuard.ps1
 
+      - name: SYSTEM-safe logging tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-Logging.ps1
+
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
@@ -65,3 +69,7 @@ jobs:
       - name: OneBrowser guarded-folder tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-OneBrowserGuard.ps1
+
+      - name: SYSTEM-safe logging tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-Logging.ps1

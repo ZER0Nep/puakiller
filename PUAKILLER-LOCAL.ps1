@@ -38,14 +38,25 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.6.1'
+$ScriptVersion = '1.6.2'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
 
+$DefaultLogFileName = 'PUAKILLER.log'
 if (-not $LogPath) {
-    $LogPath = Join-Path $env:TEMP 'PUAKILLER.log'
+    $commonData = try { [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonApplicationData) } catch { '' }
+    if (-not $commonData) { $commonData = $env:ProgramData }
+    $defaultLogRoot = if ($commonData) {
+        Join-Path $commonData 'PUAKILLER\Logs'
+    } elseif ($env:SystemRoot) {
+        Join-Path $env:SystemRoot 'Temp\PUAKILLER\Logs'
+    } else {
+        Join-Path ([IO.Path]::GetTempPath()) 'PUAKILLER\Logs'
+    }
+    $LogPath = Join-Path $defaultLogRoot $DefaultLogFileName
 }
+$script:TranscriptStarted = $false
 $script:Removed = 0
 $script:Skipped = 0
 $script:Errors  = 0
@@ -56,6 +67,39 @@ function Test-Admin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
     (New-Object Security.Principal.WindowsPrincipal($id)).IsInRole(
         [Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Start-PuaTranscript {
+    param([string]$PreferredPath)
+
+    $leaf = $DefaultLogFileName
+    try {
+        $preferredLeaf = Split-Path -Leaf ([Environment]::ExpandEnvironmentVariables($PreferredPath))
+        if ($preferredLeaf) { $leaf = $preferredLeaf }
+    } catch {}
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+    if ($PreferredPath) { $candidates.Add($PreferredPath) }
+    if ($env:SystemRoot) { $candidates.Add((Join-Path $env:SystemRoot "Temp\PUAKILLER\Logs\$leaf")) }
+    if ($env:TEMP) { $candidates.Add((Join-Path $env:TEMP "PUAKILLER\Logs\$leaf")) }
+    $candidates.Add((Join-Path ([IO.Path]::GetTempPath()) "PUAKILLER\Logs\$leaf"))
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        try {
+            $expanded = [Environment]::ExpandEnvironmentVariables($candidate)
+            if (-not [IO.Path]::IsPathRooted($expanded)) {
+                $expanded = Join-Path (Get-Location).Path $expanded
+            }
+            $parent = Split-Path -Parent $expanded
+            if ($parent -and -not (Test-Path -LiteralPath $parent -ErrorAction SilentlyContinue)) {
+                New-Item -ItemType Directory -Path $parent -Force -ErrorAction Stop | Out-Null
+            }
+            Start-Transcript -Path $expanded -Append -ErrorAction Stop | Out-Null
+            $script:TranscriptStarted = $true
+            return $expanded
+        } catch {}
+    }
+    return $null
 }
 
 function Send-Stat([string]$Phase) {
@@ -233,7 +277,14 @@ if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
     }
 }
 
-try { Start-Transcript -Path $LogPath -ErrorAction SilentlyContinue | Out-Null } catch {}
+$requestedLogPath = $LogPath
+$activeLogPath = Start-PuaTranscript -PreferredPath $requestedLogPath
+if ($activeLogPath) {
+    $LogPath = $activeLogPath
+} else {
+    $LogPath = '(logging unavailable)'
+    Write-Host "[!] Could not start a transcript at $requestedLogPath or a fallback path." -ForegroundColor Yellow
+}
 
 Send-Stat 'start'
 
@@ -1178,7 +1229,9 @@ Write-Host ("  Done. Removed: {0}  Previewed: {1}  Errors: {2}" -f $script:Remov
 if ($DryRun) { Write-Host "  Preview only - run again without -DryRun to remove." -ForegroundColor Yellow }
 Write-Host "============================================================" -ForegroundColor Cyan
 
-try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
+if ($script:TranscriptStarted) {
+    try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
+}
 
 if ([Environment]::UserInteractive -and -not $Headless) {
     Write-Host ""
