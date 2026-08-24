@@ -1,71 +1,19 @@
 # PUA Killer
 
-A Windows PowerShell 5.1-compatible cleanup script for Pulse Browser and related
-potentially unwanted applications (PUAs). It removes matching processes,
-scheduled tasks, services, COM/registry persistence, install folders, shortcuts,
-droppers, and known abused-certificate artifacts.
-
-Current rules cover Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser,
-OneStart, ProOneStartHub/ProOneStartPDF, OneBrowser, ManualFinder variants, and
-KitchenCanvas.
+Removes Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser, OneStart,
+ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, and related PUA leftovers.
 
 <!-- stats:start -->
 [![Total fetches](https://img.shields.io/badge/total%20fetches-85-2ea44f)](https://script.nep.red/stat)
 <!-- stats:end -->
 
-The fetch counter is refreshed from the [live statistics dashboard](https://script.nep.red/stat)
-every 15 minutes by GitHub Actions.
+## Run
 
-## Run it
-
-Run cleanup immediately:
+Paste this into PowerShell:
 
 ```powershell
-$uri = 'https://script.nep.red/?nocache=' + [guid]::NewGuid().ToString('N')
-irm $uri -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-cache'} | iex
+irm "https://script.nep.red/?nocache=$([guid]::NewGuid())" -Headers @{'Cache-Control'='no-cache, no-store';Pragma='no-cache'} | iex
 ```
 
-No menu or confirmation is shown. The script requests elevation when needed,
-removes detected artifacts, writes its log, and exits. The unique URL and
-no-cache headers force Windows and intermediary proxies to fetch the current
-hosted script on every run.
-
-Explicit preview mode remains available:
-
-```powershell
-$uri = 'https://script.nep.red/?nocache=' + [guid]::NewGuid().ToString('N')
-$script = irm $uri -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-cache'}
-& ([scriptblock]::Create($script)) -DryRun -NoStats
-```
-
-The script asks for elevation when system-wide cleanup is needed. By default it
-appends to `C:\ProgramData\PUAKILLER\Logs\PUAKILLER.log`, including when it runs
-as `SYSTEM`. The startup banner prints the actual path used. If that location is
-not writable, the script falls back to Windows Temp and then the current account's
-Temp directory.
-
-Useful options:
-
-- `-DryRun`: show actions without changing the system.
-- `-Run`: remove detected artifacts.
-- `-Harden`: plant opt-in reinstall blockers after cleanup.
-- `-NoElevate`: limit cleanup to the current user's accessible scope.
-- `-SkipCertScan`: skip the broader known-abused-certificate scan.
-- `-NoStats`: disable the hosted script's anonymous operational statistics.
-- `-LogPath <path>`: append the transcript to a custom location.
-
-The hosted script reports a random run ID, script/PowerShell/Windows versions,
-selected mode flags, privilege state, and removal/error counts to
-`https://script.nep.red/stat`. It does not send filenames, usernames, or detected
-artifact names. Use `-NoStats` to disable this request. `PUAKILLER-LOCAL.ps1`
-does not send statistics.
-
-## Development
-
-The static safety suite extracts rules without executing the removal scripts:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-PuaRules.ps1
-```
-
-GitHub Actions runs the same checks under Windows PowerShell 5.1 and PowerShell 7.
+It fetches the newest version, runs cleanup immediately, requests administrator
+access when needed, and exits. No menu or confirmation.
