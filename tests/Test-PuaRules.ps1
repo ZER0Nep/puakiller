@@ -183,6 +183,15 @@ foreach ($scriptPath in @($Hosted, $Local)) {
     Check ($txt -match '\$skipCertStr\$noStatsStr\$logStr') "$leaf download fallback does not forward safety/privacy/log options"
 }
 
+Write-Host "== DEFAULT MODE: no-argument execution must remove without prompting ==" -ForegroundColor Cyan
+foreach ($scriptPath in @($Hosted, $Local)) {
+    $leaf = Split-Path -Leaf $scriptPath
+    $txt = Get-Content -LiteralPath $scriptPath -Raw
+    Check ($txt -match '(?m)if \(-not \$DryRun -and -not \$Run\) \{ \$Run = \$true; \$Headless = \$true') "$leaf does not enter headless removal mode by default"
+    Check ($txt -notmatch 'Select an option \(1/2/3\)') "$leaf still contains the interactive removal menu"
+    Check ($txt -notmatch 'choose \[2\]') "$leaf still tells users to select the removed menu option"
+}
+
 Write-Host ""
 if ($script:fail -eq 0) {
     Write-Host "RESULT: PASS  ($script:pass checks)" -ForegroundColor Green

@@ -17,18 +17,20 @@ every 15 minutes by GitHub Actions.
 
 ## Run it
 
-Preview first (recommended):
+Run cleanup immediately:
+
+```powershell
+irm https://script.nep.red | iex
+```
+
+No menu or confirmation is shown. The script requests elevation when needed,
+removes detected artifacts, writes its log, and exits.
+
+Explicit preview mode remains available:
 
 ```powershell
 $script = irm https://script.nep.red
 & ([scriptblock]::Create($script)) -DryRun -NoStats
-```
-
-Remove detected artifacts:
-
-```powershell
-$script = irm https://script.nep.red
-& ([scriptblock]::Create($script)) -Run
 ```
 
 The script asks for elevation when system-wide cleanup is needed. Review the log

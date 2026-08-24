@@ -38,7 +38,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.4.0'
+$ScriptVersion = '1.5.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -176,26 +176,6 @@ $BadSigners = @(
     'VAST LAKE'
 )
 $BadSignerRx = '(?i)(' + (($BadSigners | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')'
-
-if (-not $DryRun -and -not $Run) {
-    if (-not [Environment]::UserInteractive) { return }
-    Write-Host ""
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "   PUA Removal  -  $puaBanner" -ForegroundColor Cyan
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "   [1]  Preview only  (show what would be removed, no changes)" -ForegroundColor Gray
-    Write-Host "   [2]  Remove now" -ForegroundColor Gray
-    Write-Host "   [3]  Exit" -ForegroundColor Gray
-    Write-Host ""
-    $choice = $null
-    try { $choice = Read-Host "Select an option (1/2/3)" } catch { return }
-    switch ($choice) {
-        '1' { $DryRun = $true }
-        '2' { $Run = $true }
-        default { return }
-    }
-}
 
 if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
     try {
@@ -1107,7 +1087,7 @@ Send-Stat 'done'
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ("  Done. Removed: {0}  Previewed: {1}  Errors: {2}" -f $script:Removed,$script:Skipped,$script:Errors) -ForegroundColor Cyan
-if ($DryRun) { Write-Host "  Preview only - run again and choose [2] to remove." -ForegroundColor Yellow }
+if ($DryRun) { Write-Host "  Preview only - run again without -DryRun to remove." -ForegroundColor Yellow }
 Write-Host "============================================================" -ForegroundColor Cyan
 
 try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
