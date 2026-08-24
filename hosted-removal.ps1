@@ -37,7 +37,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.7.0'
+$ScriptVersion = '1.8.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = 'https://script.nep.red/stat'
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -252,7 +252,14 @@ $Puas = @(
     # so it can't hit a legit "Recipe Setup.exe". Loader: enumerates browser/proxy/installed-programs, scheduled-task + startup
     # persistence, lies dormant for weeks, then pulls stealer/RAT/proxyware. Process KitchenCanvas.exe; install %LOCALAPPDATA%\Programs\
     # KitchenCanvas. Signer rotates (cert sweep covers it); no Pub pinned. Variants KitchenCanvas_<digits>.exe in the sandboxes.
-    @{ Name='KitchenCanvas'; Label='KitchenCanvas'; Rx='(?i)(\bKitchenCanvas|\bRecipeSetup[-_])'; Proc=@('KitchenCanvas'); Pub=''; Nw=$false; Harden=@('Local\KitchenCanvas','Roaming\KitchenCanvas','Local\Programs\KitchenCanvas') }
+    @{ Name='KitchenCanvas'; Label='KitchenCanvas'; Rx='(?i)(\bKitchenCanvas|\bRecipeSetup[-_])'; Proc=@('KitchenCanvas'); Pub=''; Nw=$false; Harden=@('Local\KitchenCanvas','Roaming\KitchenCanvas','Local\Programs\KitchenCanvas') },
+
+    # Shift Browser - user-supplied ANY.RUN URL analysis (task 8498066e-0e2c-4f80-bbfa-2d873d5be2a2; never downloaded or
+    # executed here). Observed v147.1.1.366 under %LOCALAPPDATA%\Shift\chromium\shift.exe, installer Shift_hwemja.exe /
+    # shift-v147.1.1-web.exe, and persistence task ShiftLaunchTask. Shift is a legitimate signed product, so neither the
+    # generic process name nor its publisher is globally blocklisted. The generic Shift folder/key is guarded by static
+    # path, filename, or signer evidence before removal.
+    @{ Name='ShiftBrowser'; Label='ShiftBrowser'; Rx='(?i)(\bShiftLaunchTask\b|\\Shift\\chromium\\shift\.exe\b|\bShift Browser\b|\bShift_[a-z]{6}\.(?:exe|tmp)\b|\bshift-v147\.1\.1-web\.exe\b)'; Proc=@(); Pub='(?i)^Shift Technologies Inc\.?$'; Nw=$false; Harden=@(); Aliases=@('Shift'); RegNames=@('Shift') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
@@ -485,7 +492,7 @@ function Test-PuaAliasDir {
         # never loads or executes a candidate binary.
         $files = @(Get-ChildItem -LiteralPath $Path -Recurse -File -Filter *.exe -Force -ErrorAction SilentlyContinue | Select-Object -First 32)
         foreach ($file in $files) {
-            if (($Proc -contains $file.BaseName) -or ($file.Name -match $Rx)) { return $true }
+            if (($Proc -contains $file.BaseName) -or ($file.Name -match $Rx) -or ($file.FullName -match $Rx)) { return $true }
             if (Test-PuaFileHash -Path $file.FullName -Hashes $Hashes) { return $true }
         }
         if ($Pub) {

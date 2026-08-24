@@ -73,6 +73,12 @@ loads only the two static evidence helpers, never the removal script, and proves
 that an unrelated `OB` folder is preserved while a matching executable name or
 registered SHA-256 is detected. No malware sample is downloaded or executed.
 
+## `Test-ShiftBrowserGuard.ps1`
+
+A harmless-fixture test for the generic `Shift` install-folder alias. It proves
+that an unrelated folder is preserved while the report-specific
+`Shift\chromium\shift.exe` layout is detected. No external binary is used.
+
 ## `Test-Logging.ps1`
 
 Checks that both scripts prefer the shared `ProgramData` log location, retain

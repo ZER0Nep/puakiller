@@ -105,13 +105,14 @@ $BENIGN_NAMES = @(
   'Figma','Notepad++','Sublime Text','JetBrains','Audacity','HandBrake','ShareX',
   'Invoices','Tax2024','Resume','Family Photos','Minecraft','MyConverterNotes','ManualsLib',
   'Recipe Setup.exe','RecipeKeeper','My Recipe Box','Paprika Recipe Manager','MyRecipeSetup.exe',
-  'OB','OBS Studio','Object Browser','One Browser Tab','OneBrowserNotes'
+  'OB','OBS Studio','Object Browser','One Browser Tab','OneBrowserNotes',
+  'Shift','Night Shift','Shift Work Calendar','Shift4','Shift Notes','C:\Tools\Shift\unrelated.exe'
 )
 # Legitimate / OS process names that must NEVER appear in a PUA's Proc kill list.
 $BENIGN_PROCS = @(
   'chrome','msedge','firefox','brave','node','msiexec','mshta','powershell','pwsh','cmd',
   'svchost','explorer','code','slack','discord','teams','onedrive','notepad','python','git',
-  'vlc','setup','installer','update','updater','helper','launcher','viewer','host','service'
+  'vlc','setup','installer','update','updater','helper','launcher','viewer','host','service','shift'
 )
 # Legitimate signing publishers that must NEVER match the abused-cert list.
 $BENIGN_PUBLISHERS = @(
@@ -119,7 +120,7 @@ $BENIGN_PUBLISHERS = @(
   'Foxit Software Incorporated','Brave Software, Inc.','Valve','Notion Labs, Inc.',
   'Slack Technologies, Inc.','Apple Inc.','Dropbox, Inc.','NVIDIA Corporation',
   'Intel Corporation','Python Software Foundation','GitHub, Inc.','Igor Pavlov','VideoLAN',
-  'Work Product Solutions LLC'
+  'Work Product Solutions LLC','Shift Technologies Inc.'
 )
 
 # Known cluster artifacts that MUST be detected (regression guard).
@@ -135,11 +136,13 @@ $MAL_RX = @(
   'ManualFinder','ManualFinderApp','AllManualsReader','OpenMyManual','ManualReaderPro',
   'TotalUserManuals','PDFEditorUpdater','OpenBook','ConvertMate','PDFEditor',
   'KitchenCanvas','KitchenCanvas-Setup-3.4.exe','RecipeSetup_275522.exe','KitchenCanvas_239364.exe',
-  'C:\Users\x\AppData\Local\Programs\KitchenCanvas\KitchenCanvas.exe'
+  'C:\Users\x\AppData\Local\Programs\KitchenCanvas\KitchenCanvas.exe',
+  'Shift Browser','ShiftLaunchTask','Shift_hwemja.exe','shift-v147.1.1-web.exe',
+  'C:\Users\x\AppData\Local\Shift\chromium\shift.exe'
 )
 $MAL_PULSE = @('PulseBrowser','Pulse Browser','PulseSoftware','Pulse Software')
-$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor')
-$MAL_ALIASES = @('OB')
+$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor','ShiftBrowser')
+$MAL_ALIASES = @('OB','Shift')
 $MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor')
 $MAL_HASHES = @('fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957')
 $MAL_PUBLISHERS = @(
@@ -179,6 +182,8 @@ foreach ($s in $MAL_PROCS)     { Check ([bool](Match-Proc $s))       "PUA proces
 foreach ($s in $MAL_HASHES)    { Check ([bool](Match-Hash $s))       "PUA SHA-256 '$s' not registered" }
 foreach ($s in $MAL_PUBLISHERS){ Check (Match-Signer $s)             "abused signer '$s' not matched by BadSignerRx" }
 Check (-not (Match-FolderName 'OB')) "short OneBrowser alias 'OB' must not be an unconditional install-folder Name"
+Check (-not (Match-FolderName 'Shift')) "generic Shift alias must not be an unconditional install-folder Name"
+Check (-not (Match-Proc 'shift')) "generic shift process must be matched by its full install path, not by name"
 
 Write-Host "== PARITY: both scripts must define identical rules ==" -ForegroundColor Cyan
 $PuasL  = @(Get-ScriptVar -Path $Local -VarName 'Puas')

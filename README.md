@@ -3,7 +3,7 @@
 A brainless script for removing PUA, made for the brainless masses who install them.
 
 It scrubs Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser, OneStart,
-ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, and their leftovers.
+ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, Shift Browser, and their leftovers.
 
 <!-- stats:start -->
 [![Total fetches](https://img.shields.io/badge/total%20fetches-88-2ea44f)](https://script.nep.red/stat)
