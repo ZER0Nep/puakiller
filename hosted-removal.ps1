@@ -37,7 +37,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.6.0'
+$ScriptVersion = '1.6.1'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = 'https://script.nep.red/stat'
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -219,7 +219,7 @@ if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
                 $launch = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$selfPath`"",$modeArg) + $extra
             } else {
                 $boot = Join-Path $env:TEMP 'PUAKILLER-boot.ps1'
-                "& ([scriptblock]::Create((Invoke-RestMethod -Uri '$ScriptUrl' -TimeoutSec 30))) $modeArg -StatId $runIdLiteral$hardStr$skipCertStr$noStatsStr$logStr" |
+                "& ([scriptblock]::Create((Invoke-RestMethod -Uri ('$ScriptUrl/?nocache=' + [guid]::NewGuid().ToString('N')) -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-cache'} -TimeoutSec 30))) $modeArg -StatId $runIdLiteral$hardStr$skipCertStr$noStatsStr$logStr" |
                     Out-File -FilePath $boot -Encoding UTF8 -Force
                 $launch = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$boot`"")
             }

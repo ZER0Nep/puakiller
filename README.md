@@ -21,16 +21,20 @@ every 15 minutes by GitHub Actions.
 Run cleanup immediately:
 
 ```powershell
-irm https://script.nep.red | iex
+$uri = 'https://script.nep.red/?nocache=' + [guid]::NewGuid().ToString('N')
+irm $uri -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-cache'} | iex
 ```
 
 No menu or confirmation is shown. The script requests elevation when needed,
-removes detected artifacts, writes its log, and exits.
+removes detected artifacts, writes its log, and exits. The unique URL and
+no-cache headers force Windows and intermediary proxies to fetch the current
+hosted script on every run.
 
 Explicit preview mode remains available:
 
 ```powershell
-$script = irm https://script.nep.red
+$uri = 'https://script.nep.red/?nocache=' + [guid]::NewGuid().ToString('N')
+$script = irm $uri -Headers @{'Cache-Control'='no-cache, no-store'; Pragma='no-cache'}
 & ([scriptblock]::Create($script)) -DryRun -NoStats
 ```
 

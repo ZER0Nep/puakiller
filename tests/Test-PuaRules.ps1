@@ -200,6 +200,9 @@ foreach ($scriptPath in @($Hosted, $Local)) {
     Check ($txt -match "(?m)if \(\`$LogPath\).*\`$reArgs \+= @\('-LogPath'") "$leaf does not forward -LogPath to 64-bit PowerShell"
     Check ($txt -match "(?m)if \(\`$LogPath\).*\`$extra \+= @\('-LogPath'")  "$leaf does not forward -LogPath during elevation"
     Check ($txt -match '\$skipCertStr\$noStatsStr\$logStr') "$leaf download fallback does not forward safety/privacy/log options"
+    Check ($txt -match "\?nocache=' \+ \[guid\]::NewGuid\(\)\.ToString\('N'\)") "$leaf elevation fallback does not use a unique cache-busting URL"
+    Check ($txt -match "'Cache-Control'='no-cache, no-store'") "$leaf elevation fallback does not disable HTTP caching"
+    Check ($txt -match "Pragma='no-cache'") "$leaf elevation fallback does not disable legacy proxy caching"
 }
 
 Write-Host "== DEFAULT MODE: no-argument execution must remove without prompting ==" -ForegroundColor Cyan
