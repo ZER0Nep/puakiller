@@ -58,6 +58,10 @@ jobs:
         shell: powershell
         run: .\tests\Test-Logging.ps1
 
+      - name: User/SYSTEM execution-context tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-ExecutionContext.ps1
+
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
@@ -73,3 +77,7 @@ jobs:
       - name: SYSTEM-safe logging tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-Logging.ps1
+
+      - name: User/SYSTEM execution-context tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-ExecutionContext.ps1

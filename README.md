@@ -18,4 +18,5 @@ irm "https://script.nep.red/?nocache=$([guid]::NewGuid())" -Headers @{'Cache-Con
 ```
 
 It fetches the newest version, runs cleanup immediately, requests administrator
-access when needed, and exits. No menu or confirmation.
+access for a normal user when needed, or automatically uses machine/all-user
+scope under `SYSTEM`. No menu or confirmation.

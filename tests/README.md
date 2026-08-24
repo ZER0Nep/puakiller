@@ -79,3 +79,10 @@ Checks that both scripts prefer the shared `ProgramData` log location, retain
 identical append/fallback behavior, and never regress to a profile-specific Temp
 default. It executes only the isolated transcript helper against a unique harmless
 Temp fixture, then removes that fixture.
+
+## `Test-ExecutionContext.ps1`
+
+Loads only the pure context resolver and verifies automatic behavior for SYSTEM,
+elevated administrators, interactive users, and noninteractive standard accounts.
+It also statically checks that all-profile discovery and UAC decisions use the
+resolved context. It never executes cleanup code.

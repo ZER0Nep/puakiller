@@ -38,7 +38,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.6.2'
+$ScriptVersion = '1.7.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -68,6 +68,42 @@ function Test-Admin {
     (New-Object Security.Principal.WindowsPrincipal($id)).IsInRole(
         [Security.Principal.WindowsBuiltInRole]::Administrator)
 }
+
+function Resolve-PuaExecutionContext {
+    param(
+        [string]$Sid,
+        [bool]$IsAdmin,
+        [bool]$IsInteractive,
+        [bool]$NoElevateRequested
+    )
+
+    $isSystem = ($Sid -eq 'S-1-5-18')
+    $allProfiles = ($isSystem -or $IsAdmin)
+    $shouldElevate = (-not $allProfiles -and $IsInteractive -and -not $NoElevateRequested)
+    [pscustomobject]@{
+        IsSystem     = $isSystem
+        IsAdmin      = $IsAdmin
+        IsInteractive = $IsInteractive
+        AllProfiles  = $allProfiles
+        ShouldElevate = $shouldElevate
+        Label        = if ($isSystem) { 'SYSTEM' } elseif ($IsAdmin) { 'Administrator' } else { 'User' }
+        Scope        = if ($allProfiles) { 'machine + all user profiles' } else { 'current user only' }
+    }
+}
+
+$IsAdminSession = Test-Admin
+$RuntimeContext = Resolve-PuaExecutionContext -Sid $MySid -IsAdmin $IsAdminSession -IsInteractive ([Environment]::UserInteractive) -NoElevateRequested ([bool]$NoElevate)
+if ($RuntimeContext.IsSystem) {
+    # SYSTEM is already the highest local execution context: never attempt UAC
+    # and never wait for interactive input when launched by RMM/task/service tools.
+    $NoElevate = $true
+    $Headless = $true
+} elseif (-not $RuntimeContext.IsInteractive -and -not $RuntimeContext.IsAdmin) {
+    # A noninteractive standard account cannot answer a UAC prompt. Continue in
+    # bounded current-user scope rather than hanging the deployment.
+    $NoElevate = $true
+}
+$RuntimeContext = Resolve-PuaExecutionContext -Sid $MySid -IsAdmin $IsAdminSession -IsInteractive ([Environment]::UserInteractive) -NoElevateRequested ([bool]$NoElevate)
 
 function Start-PuaTranscript {
     param([string]$PreferredPath)
@@ -238,7 +274,7 @@ $BadSigners = @(
 )
 $BadSignerRx = '(?i)(' + (($BadSigners | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')'
 
-if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
+if ($Run -and $RuntimeContext.ShouldElevate) {
     try {
         $modeArg = if ($Headless) { '-Headless' } else { '-Run' }
         $extra   = @('-StatId',"`"$RunId`"")
@@ -274,6 +310,8 @@ if ($Run -and -not $NoElevate -and -not (Test-Admin)) {
         return
     } catch {
         Write-Host "[!] Elevation declined/unavailable - continuing with current privileges." -ForegroundColor Yellow
+        $NoElevate = $true
+        $RuntimeContext = Resolve-PuaExecutionContext -Sid $MySid -IsAdmin $IsAdminSession -IsInteractive ([Environment]::UserInteractive) -NoElevateRequested $true
     }
 }
 
@@ -289,14 +327,12 @@ if ($activeLogPath) {
 Send-Stat 'start'
 
 $mode = if ($DryRun) { 'DRY-RUN (no changes)' } else { 'LIVE REMOVAL' }
-$ctx  = if (Test-Admin) { 'Administrator' } else { 'Standard user' }
+$ctx  = $RuntimeContext.Label
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  PUA Removal ($puaBanner)  -  $mode" -ForegroundColor Cyan
-Write-Host "  Privilege: $ctx   Log: $LogPath" -ForegroundColor DarkGray
-if ($NoElevate -and -not (Test-Admin)) {
-    Write-Host "  Scope: current user only (no elevation requested)" -ForegroundColor DarkGray
-}
+Write-Host "  Identity: $ctx   Scope: $($RuntimeContext.Scope)" -ForegroundColor DarkGray
+Write-Host "  Log: $LogPath" -ForegroundColor DarkGray
 Write-Host "============================================================" -ForegroundColor Cyan
 
 $PulseRegex = '(?i)(PulseSoftware|PulseBrowser|Pulse\s+Browser|Pulse\s+Software)'
@@ -725,28 +761,34 @@ Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | ForEach-Object {
     }
 }
 
-Section "Discovering user registry hives (all profiles)"
+Section "Discovering user registry hives ($($RuntimeContext.Scope))"
 $softwareHiveRoots = New-Object System.Collections.Generic.List[string]
 $classesHiveRoots  = New-Object System.Collections.Generic.List[string]
-$loadedSids = @{}
+$loadedSoftwareSids = @{}
+$loadedClassSids = @{}
+$userSidRx = '^S-1-(?:5-21|12-1)-[\d-]+$'
 Get-ChildItem 'Registry::HKEY_USERS' -ErrorAction SilentlyContinue | ForEach-Object {
     $n = $_.PSChildName
-    if ($n -match '^S-1-5-21-[\d-]+_Classes$') {
-        $classesHiveRoots.Add("Registry::HKEY_USERS\$n")
-        $loadedSids[($n -replace '_Classes$','')] = $true
-    } elseif ($n -match '^S-1-5-21-[\d-]+$') {
-        $softwareHiveRoots.Add("Registry::HKEY_USERS\$n")
-        $loadedSids[$n] = $true
+    $sid = if ($n -match '^(S-1-(?:5-21|12-1)-[\d-]+)_Classes$') { $Matches[1] } elseif ($n -match $userSidRx) { $n } else { $null }
+    if ($sid -and ($RuntimeContext.AllProfiles -or $sid -eq $MySid)) {
+        if ($n -match '_Classes$') {
+            $classesHiveRoots.Add("Registry::HKEY_USERS\$n")
+            $loadedClassSids[$sid] = $true
+        } else {
+            $softwareHiveRoots.Add("Registry::HKEY_USERS\$n")
+            $loadedSoftwareSids[$sid] = $true
+        }
     }
 }
-if (Test-Admin) {
+if ($RuntimeContext.AllProfiles) {
     Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue | ForEach-Object {
         $sid = $_.PSChildName
-        if ($sid -match '^S-1-5-21-[\d-]+$' -and -not $loadedSids[$sid]) {
-            $pp = (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).ProfileImagePath
+        if ($sid -match $userSidRx -and (-not $loadedSoftwareSids[$sid] -or -not $loadedClassSids[$sid])) {
+            $rawProfilePath = (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).ProfileImagePath
+            $pp = if ($rawProfilePath) { [Environment]::ExpandEnvironmentVariables($rawProfilePath) } else { $null }
             if ($pp) {
                 $nt = Join-Path $pp 'NTUSER.DAT'
-                if (Test-Path -LiteralPath $nt -ErrorAction SilentlyContinue) {
+                if (-not $loadedSoftwareSids[$sid] -and (Test-Path -LiteralPath $nt -ErrorAction SilentlyContinue)) {
                     & reg.exe load "HKU\PulseTmp_$sid" "$nt" *> $null
                     if ($LASTEXITCODE -eq 0) {
                         $script:LoadedHives.Add("HKU\PulseTmp_$sid")
@@ -754,7 +796,7 @@ if (Test-Admin) {
                     }
                 }
                 $uc = Join-Path $pp 'AppData\Local\Microsoft\Windows\UsrClass.dat'
-                if (Test-Path -LiteralPath $uc -ErrorAction SilentlyContinue) {
+                if (-not $loadedClassSids[$sid] -and (Test-Path -LiteralPath $uc -ErrorAction SilentlyContinue)) {
                     & reg.exe load "HKU\PulseTmpC_$sid" "$uc" *> $null
                     if ($LASTEXITCODE -eq 0) {
                         $script:LoadedHives.Add("HKU\PulseTmpC_$sid")
@@ -893,19 +935,27 @@ foreach ($ur in $uninstallRoots) {
 
 Section "Removing files and folders"
 $userRoots = New-Object System.Collections.Generic.List[string]
-$userRoots.Add($env:USERPROFILE)
-try {
-    Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue | ForEach-Object {
-        $pp = (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).ProfileImagePath
-        if ($pp -and (Test-Path -LiteralPath $pp -ErrorAction SilentlyContinue)) { $userRoots.Add($pp) }
-    }
-} catch {}
-try {
-    $profilesDir = Split-Path -Parent $env:USERPROFILE
-    if ($profilesDir -and (Test-Path -LiteralPath $profilesDir -ErrorAction SilentlyContinue)) {
-        Get-ChildItem -LiteralPath $profilesDir -Directory -ErrorAction SilentlyContinue | ForEach-Object { $userRoots.Add($_.FullName) }
-    }
-} catch {}
+if (-not $RuntimeContext.IsSystem -and $env:USERPROFILE) { $userRoots.Add($env:USERPROFILE) }
+if ($RuntimeContext.AllProfiles) {
+    try {
+        Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue | ForEach-Object {
+            if ($_.PSChildName -match $userSidRx) {
+                $rawProfilePath = (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).ProfileImagePath
+                $pp = if ($rawProfilePath) { [Environment]::ExpandEnvironmentVariables($rawProfilePath) } else { $null }
+                if ($pp -and (Test-Path -LiteralPath $pp -ErrorAction SilentlyContinue)) { $userRoots.Add($pp) }
+            }
+        }
+    } catch {}
+    try {
+        $profileList = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue
+        $profilesDir = if ($profileList.ProfilesDirectory) { [Environment]::ExpandEnvironmentVariables($profileList.ProfilesDirectory) } elseif ($env:PUBLIC) { Split-Path -Parent $env:PUBLIC } else { $null }
+        if ($profilesDir -and (Test-Path -LiteralPath $profilesDir -ErrorAction SilentlyContinue)) {
+            Get-ChildItem -LiteralPath $profilesDir -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') } |
+                ForEach-Object { $userRoots.Add($_.FullName) }
+        }
+    } catch {}
+}
 $userRoots = $userRoots | Where-Object { $_ } | Select-Object -Unique
 
 $dirCandidates = New-Object System.Collections.Generic.List[string]
