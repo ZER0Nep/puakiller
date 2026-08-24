@@ -8,6 +8,13 @@ droppers, and known abused-certificate artifacts.
 Current rules cover Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser,
 OneStart, ProOneStartHub/ProOneStartPDF, ManualFinder variants, and KitchenCanvas.
 
+<!-- stats:start -->
+[![Total fetches](https://img.shields.io/badge/total%20fetches-78-2ea44f)](https://script.nep.red/stat)
+<!-- stats:end -->
+
+The fetch counter is refreshed from the [live statistics dashboard](https://script.nep.red/stat)
+every 15 minutes by GitHub Actions.
+
 ## Run it
 
 Preview first (recommended):

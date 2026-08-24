@@ -1,0 +1,39 @@
+name: update fetch counter
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-fetch-counter
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read live counter and update README
+        id: stats
+        shell: pwsh
+        run: ./scripts/Update-Stats.ps1
+
+      - name: Commit changed counter
+        shell: bash
+        env:
+          COUNT: ${{ steps.stats.outputs.count }}
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "Counter is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update fetch counter to ${COUNT} [skip ci]"
+          git push

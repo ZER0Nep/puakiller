@@ -46,6 +46,14 @@ jobs:
         shell: powershell
         run: .\tests\Test-PuaRules.ps1
 
+      - name: Stats updater tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-StatsUpdater.ps1
+
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
+
+      - name: Stats updater tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-StatsUpdater.ps1

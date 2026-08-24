@@ -58,3 +58,10 @@ Editing the `$Puas` registry in the scripts? Then in `tests/Test-PuaRules.ps1`:
 If a benign app legitimately shares a name with a PUA (e.g. a real "PDF Editor"), rely
 on the `Pub` (publisher) and install-path signals to disambiguate rather than widening
 the name regex.
+
+## `Test-StatsUpdater.ps1`
+
+An offline fixture test for the README fetch counter. It verifies that the updater
+extracts only the labelled numeric value, URL-encodes the badge count, preserves
+content outside the marker block, and fails closed when the endpoint HTML is not in
+the expected format.
