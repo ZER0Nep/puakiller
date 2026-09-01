@@ -1,0 +1,7 @@
+# Python bytecode from the rule compiler and its tests.
+__pycache__/
+*.pyc
+
+# scripts/compile-rules.py --out writes here. The generated region is never committed on its
+# own, only applied into the two removal scripts by scripts/apply-generated.py.
+build/
