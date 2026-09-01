@@ -1,0 +1,21 @@
+# Single-shot runs of the intel factory. Nothing here is a long-lived service: the factory is a
+# batch job that produces a report for a human, so it starts, writes, and exits.
+
+services:
+  intel:
+    build: .
+    # The default mode reaches nothing, so it is given nothing to reach. Remove this only after
+    # reviewing `puakiller-intel policy --mode <mode>` for the mode you intend to run.
+    network_mode: none
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+    user: "10001:10001"
+    volumes:
+      # The benign corpus is read from the repository, read-only.
+      - ../rules:/repo/rules:ro
+      - ./out:/data
+    mem_limit: 512m
+    pids_limit: 256
+    command: ["run", "--family", "OneStart", "--seed", "onestart", "--benign", "/repo/rules/benign.json", "--out", "/data"]

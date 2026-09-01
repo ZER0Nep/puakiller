@@ -1,0 +1,43 @@
+[
+  {
+    "id": "fixture:public-report:onestart-001",
+    "provider": "fixture",
+    "public_reference": "https://www.pcrisk.com/removal-guides/30436-onestart-browser-hijacker",
+    "observed_at": "2026-08-14T00:00:00Z",
+    "retrieved_at": "2026-09-01T00:00:00Z",
+    "facts": [
+      { "kind": "folder", "value": "OneStart.ai" },
+      { "kind": "process", "value": "onestart" },
+      { "kind": "signer", "value": "OneStart Technologies LLC" },
+      { "kind": "task_name", "value": "OneStart Chromium" },
+      { "kind": "registry_name", "value": "OneStart.ai" },
+      { "kind": "url", "value": "https://www.pcrisk.com/removal-guides/30436-onestart-browser-hijacker" }
+    ]
+  },
+  {
+    "id": "fixture:public-report:onestart-002",
+    "provider": "fixture",
+    "public_reference": "https://www.todyl.com/blog/onestart-ai-browser-deception",
+    "observed_at": "2026-08-20T00:00:00Z",
+    "retrieved_at": "2026-09-01T00:00:00Z",
+    "facts": [
+      { "kind": "folder", "value": "OneStart.ai/OneStart/Application" },
+      { "kind": "process", "value": "onestart" },
+      { "kind": "signer", "value": "OneStart Technologies LLC" },
+      { "kind": "sha256", "value": "246E8D6A0000000000000000000000000000000000000000000000000000F7C9" },
+      { "kind": "task_name", "value": "OneStart Updater" }
+    ]
+  },
+  {
+    "id": "fixture:public-report:onestart-003",
+    "provider": "fixture",
+    "public_reference": "https://any.run/report/example-onestart-public-task",
+    "observed_at": "2026-08-25T00:00:00Z",
+    "retrieved_at": "2026-09-01T00:00:00Z",
+    "facts": [
+      { "kind": "folder", "value": "OneStart.ai" },
+      { "kind": "sha256", "value": "246e8d6a0000000000000000000000000000000000000000000000000000f7c9" },
+      { "kind": "filename", "value": "OneStartSetup.exe" }
+    ]
+  }
+]

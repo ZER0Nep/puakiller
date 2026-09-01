@@ -18,6 +18,9 @@
 *.yaml  text eol=lf
 *.json  text eol=lf
 *.md    text eol=lf
+*.toml  text eol=lf
+# A Dockerfile with CRLF breaks RUN lines inside the image.
+Dockerfile text eol=lf
 
 .gitattributes text eol=lf
 .gitignore     text eol=lf

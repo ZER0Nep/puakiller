@@ -55,6 +55,17 @@ jobs:
         shell: bash
         run: python3 tests/compiler/test_escape.py
 
+      - name: Intel factory tests (offline, no key, no network)
+        shell: bash
+        run: python3 intel-factory/tests/test_intel_factory.py
+
+      - name: Intel factory reaches nothing in its default mode
+        shell: bash
+        run: |
+          cd intel-factory
+          PYTHONPATH=src python3 -m puakiller_intel policy --mode fixture | tee policy.txt
+          grep -q 'outbound=none' policy.txt
+
       - name: PUA rule + safety tests (Windows PowerShell 5.1)
         shell: powershell
         run: .\tests\Test-PuaRules.ps1

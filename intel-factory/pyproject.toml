@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "puakiller-intel"
+version = "0.1.0"
+description = "Public intel factory for PUAKILLER: turns public reports into reviewed candidates, never rules."
+requires-python = ">=3.10"
+# No runtime dependencies, on purpose. This package decides whether a proposal reaches a human
+# reviewer; every line of that decision should be readable without pulling in a supply chain.
+dependencies = []
+
+[project.optional-dependencies]
+# Schema validation is a nice-to-have: the pipeline's own checks are stricter and run first.
+schema = ["jsonschema>=4"]
+
+[project.scripts]
+puakiller-intel = "puakiller_intel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
