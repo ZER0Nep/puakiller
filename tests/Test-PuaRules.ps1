@@ -105,7 +105,7 @@ $BENIGN_NAMES = @(
   'Figma','Notepad++','Sublime Text','JetBrains','Audacity','HandBrake','ShareX',
   'Invoices','Tax2024','Resume','Family Photos','Minecraft','MyConverterNotes','ManualsLib',
   'Recipe Setup.exe','RecipeKeeper','My Recipe Box','Paprika Recipe Manager','MyRecipeSetup.exe',
-  'OB','OBS Studio','Object Browser','One Browser Tab','OneBrowserNotes',
+  'OB','Object Browser','One Browser Tab','OneBrowserNotes',
   'Shift','Night Shift','Shift Work Calendar','Shift4','Shift Notes','C:\Tools\Shift\unrelated.exe'
 )
 # Legitimate / OS process names that must NEVER appear in a PUA's Proc kill list.
