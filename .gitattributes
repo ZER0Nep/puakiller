@@ -10,6 +10,9 @@
 *.psd1  text eol=crlf
 
 *.py    text eol=lf
+# The rule golden file is compared byte for byte against an LF-joined snapshot, so a
+# CRLF checkout would break the comparison on a fresh clone.
+*.txt   text eol=lf
 *.sh    text eol=lf
 *.yml   text eol=lf
 *.yaml  text eol=lf
@@ -17,3 +20,5 @@
 *.md    text eol=lf
 
 .gitattributes text eol=lf
+.gitignore     text eol=lf
+CODEOWNERS     text eol=lf

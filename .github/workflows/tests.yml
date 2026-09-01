@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   pull_request:
 
+# This job only reads the repository and consumes no secrets. Declaring the permission
+# explicitly stops it inheriting a broader repository default.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: PUA rules + safety
@@ -42,9 +47,21 @@ jobs:
           }
           if ($bad) { exit 1 } else { Write-Host "OK: no PowerShell 7-only constructs" }
 
+      - name: Generated rule regions are in sync with rules/catalog.json
+        shell: bash
+        run: python3 scripts/verify-generated.py
+
+      - name: Rule compiler escaping tests (anchored against [regex]::Escape)
+        shell: bash
+        run: python3 tests/compiler/test_escape.py
+
       - name: PUA rule + safety tests (Windows PowerShell 5.1)
         shell: powershell
         run: .\tests\Test-PuaRules.ps1
+
+      - name: Rule catalog fidelity tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Test-RuleCatalog.ps1
 
       - name: Stats updater tests (Windows PowerShell 5.1)
         shell: powershell
@@ -69,6 +86,10 @@ jobs:
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
+
+      - name: Rule catalog fidelity tests (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-RuleCatalog.ps1
 
       - name: Stats updater tests (PowerShell 7)
         shell: pwsh

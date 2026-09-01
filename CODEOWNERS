@@ -1,0 +1,26 @@
+# Review requirements for the paths that can cause a destructive false positive.
+#
+# The rule catalog decides which folders, processes, registry keys and signed applications get
+# deleted from a user's machine. No rule change is auto-merged (see
+# puakiller-ai-architecture-kit/DECISIONS.md), and every path below needs a named reviewer.
+
+# Everything, by default.
+*                       @ZER0Nep
+
+# The source of truth for detection and removal.
+/rules/                 @ZER0Nep
+
+# The scripts that ship to end users. Their rule region is generated from /rules/catalog.json;
+# hand-editing it is caught by scripts/verify-generated.py in CI.
+/hosted-removal.ps1     @ZER0Nep
+/PUAKILLER-LOCAL.ps1    @ZER0Nep
+
+# The compiler and the gate that guards the generated region.
+/scripts/               @ZER0Nep
+
+# The false-positive and detection corpora. Weakening a benign corpus is how a safe rule
+# quietly becomes a destructive one.
+/tests/                 @ZER0Nep
+
+# CI permissions, and the workflow that holds a write token.
+/.github/               @ZER0Nep

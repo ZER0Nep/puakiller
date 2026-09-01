@@ -1,0 +1,401 @@
+{
+  "schema_version": "1.0.0",
+  "extracted_at": "2026-09-01T19:22:19Z",
+  "source": {
+    "script": "hosted-removal.ps1",
+    "commit": "ff43b48e9622c422b7337198aa2730f1ce084bd9",
+    "region_start": 169,
+    "region_end": 285
+  },
+  "header_comment": [
+    "# ============================================================================",
+    "#  PUA REGISTRY  --  GENERATED BLOCK. Do not edit $Puas or $BadSigners here.",
+    "#  The source of truth is rules/catalog.json. Edit that, then run",
+    "#      python3 scripts/apply-generated.py --write",
+    "#  which rewrites this region in BOTH scripts. CI fails if the two drift apart",
+    "#  (scripts/verify-generated.py). Everything downstream -- the sweep, the",
+    "#  on-screen banner, the -Harden reinstall blockers and the final verification",
+    "#  list -- is still derived from this list, so a catalog entry is all you add.",
+    "#",
+    "#  Fields:",
+    "#    Name   = top-level install-folder name. The folder sweep deletes",
+    "#             %LOCALAPPDATA%\\<Name>, %APPDATA%\\<Name>, ...\\Programs\\<Name>,",
+    "#             Start-Menu\\<Name>, %ProgramFiles%\\<Name>, %ProgramData%\\<Name>.",
+    "#    Label  = display name in the banner/verification ('' = hide it, e.g. a",
+    "#             second helper entry for the same product).",
+    "#    Rx     = case-insensitive regex matched against process paths, Run",
+    "#             values+data, App Paths, COM classes, uninstall entries, tasks,",
+    "#             shortcuts, droppers and Temp items.",
+    "#    Proc   = exact process names to kill (WITHOUT .exe). Use ONLY distinctive",
+    "#             names - never generic ones (node, msiexec, chrome, ...); those are",
+    "#             caught by path via Rx so legitimate apps are never touched.",
+    "#    Pub    = optional publisher regex for Add/Remove-Programs entries.",
+    "#    Nw     = $true to also clean NW.js (nw*) Temp dirs whose manifest matches.",
+    "#    Harden = AppData-relative folders to seal against reinstall under -Harden",
+    "#             (e.g. 'Local\\Foo','Roaming\\Foo','Local\\Programs\\Foo').",
+    "#    Aliases = optional additional install-folder names. Unlike Name, aliases",
+    "#             are removed only when a matching filename, hash or signer is",
+    "#             found inside, making short/generic vendor folders safe to cover.",
+    "#    RegNames = optional exact vendor registry-key names removed only when file",
+    "#             or distinctive primary-key evidence for this PUA is present.",
+    "#    Hashes = optional SHA-256 indicators checked in guarded alias folders and",
+    "#             top-level downloaded executables (static hashing; never execute).",
+    "# ============================================================================"
+  ],
+  "rules": [
+    {
+      "id": "openbook",
+      "lead": [],
+      "Name": "OpenBook",
+      "Label": "OpenBook",
+      "Rx": "(?i)\\bOpenBook\\b",
+      "Proc": [
+        "OpenBook"
+      ],
+      "Pub": "",
+      "Nw": true,
+      "Harden": [
+        "Local\\OpenBook",
+        "Roaming\\OpenBook"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": false,
+      "provenance": [],
+      "needs_provenance_review": true
+    },
+    {
+      "id": "convertmate",
+      "lead": [],
+      "Name": "ConvertMate",
+      "Label": "ConvertMate",
+      "Rx": "(?i)\\bConvertMate\\b",
+      "Proc": [
+        "ConvertMate"
+      ],
+      "Pub": "(?i)Amaryllis",
+      "Nw": false,
+      "Harden": [
+        "Local\\ConvertMate"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": false,
+      "provenance": [],
+      "needs_provenance_review": true
+    },
+    {
+      "id": "pdfeditor",
+      "lead": [],
+      "Name": "PDFEditor",
+      "Label": "PDFEditor",
+      "Rx": "(?i)\\bPDFEditor\\b",
+      "Proc": [
+        "PDFEditor"
+      ],
+      "Pub": "(?i)(AppSuite|Eclipse Media)",
+      "Nw": false,
+      "Harden": [
+        "Local\\PDFEditor",
+        "Roaming\\PDFEditor",
+        "Local\\Programs\\PDFEditor"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": false,
+      "provenance": [],
+      "needs_provenance_review": true
+    },
+    {
+      "id": "episoftware",
+      "lead": [
+        "",
+        "    # EpiBrowser / EpiStart - Chromium-clone PUA. Vendor folder %LOCALAPPDATA%\\EPISoftware (all-caps EPI); abused cert",
+        "    # \"Byte Media Sdn. Bhd.\" (TamperedChef cluster). Verified: todyl.com/blog/epibrowser, pcrisk #32056, file.net, any.run.",
+        "    # Detections: Malwarebytes PUP.Optional.EpiBrowser, Sophos \"Epi Browser (PUA)\". Install: EPISoftware\\EpiBrowser\\Application\\<ver>\\",
+        "    # (epibrowser.exe, notification_helper.exe); stager Temp\\epibrowser-bin. Reg: HKCU\\Software\\EPISoftware\\{EpiBrowser*,Update*}.",
+        "    # Tasks: EpiBrowserUpdate, EpiBrowserStartup. Full SHA256: installer 06b89c8a..c2044, app 2fe2d16e..f88e31.",
+        "    # notification_helper.exe is killed by path-match (under EPISoftware), not by generic name."
+      ],
+      "Name": "EPISoftware",
+      "Label": "EpiBrowser",
+      "Rx": "(?i)(EPISoftware|EpiBrowser|Epi\\s+Browser|EpiStart)",
+      "Proc": [
+        "epibrowser",
+        "setup.epibrowser"
+      ],
+      "Pub": "(?i)(EPISoftware|EPI\\s*Software)",
+      "Nw": false,
+      "Harden": [
+        "Local\\EPISoftware",
+        "Roaming\\EPISoftware",
+        "Local\\Programs\\EPISoftware"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": true,
+      "provenance": [
+        "todyl.com/blog/epibrowser",
+        "file.net",
+        "pcrisk #32056"
+      ],
+      "needs_provenance_review": false
+    },
+    {
+      "id": "onestart-ai",
+      "lead": [
+        "",
+        "    # OneStart / OneStart.ai - \"AI browser\" Chromium-clone hijacker; TamperedChef/AppSuite/BaoLoader cluster, same operators as",
+        "    # EpiBrowser (Sophos/Truesec; shared C2 mka3e8.com). Signers: OneStart Technologies / Caerus Media / Apollo Technologies (SSL.com).",
+        "    # Verified: pcrisk #30436, todyl.com/blog/onestart-ai-browser-deception, any.run, file.net, advanceduninstaller.com.",
+        "    # Install: %LOCALAPPDATA%\\OneStart.ai\\OneStart\\{Application\\<ver>,User Data}; also %APPDATA%\\OneStart. Process onestart.exe.",
+        "    # Reg: HKCU\\Software\\OneStart.ai; uninstall GUID {31F4B209-D4E1-41E0-A34F-35EFF7117AE8}. Run: OneStartChromium/OneStartBar.",
+        "    # Tasks: \"OneStart Chromium/Updater/Maintenance/Cleanup\" + randomized sys_component_health_* Node tasks. Toolbar OneStartBar/DBar.",
+        "    # Full SHA256: installer fb64aad2..f86cfd, app 246e8d6a..f7c9c0, MSI d2690d69..4c392a (any.run). Two entries: 'OneStart.ai'",
+        "    # clears the Local vendor tree; 'OneStart' (Label hidden) catches %APPDATA%\\OneStart + Programs/Start-Menu folders."
+      ],
+      "Name": "OneStart.ai",
+      "Label": "OneStart",
+      "Rx": "(?i)OneStart",
+      "Proc": [
+        "onestart"
+      ],
+      "Pub": "(?i)(OneStart\\.ai|OneStart Technologies|Caerus Media)",
+      "Nw": false,
+      "Harden": [
+        "Local\\OneStart.ai",
+        "Roaming\\OneStart",
+        "Local\\Programs\\OneStart.ai"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": false,
+      "provenance": [
+        "mka3e8.com",
+        "SSL.com",
+        "todyl.com/blog/onestart-ai-browser-deception",
+        "file.net",
+        "advanceduninstaller.com",
+        "pcrisk #30436"
+      ],
+      "needs_provenance_review": false
+    },
+    {
+      "id": "onestart",
+      "lead": [],
+      "Name": "OneStart",
+      "Label": "",
+      "Rx": "(?i)\\bOneStart\\b",
+      "Proc": [],
+      "Pub": "",
+      "Nw": false,
+      "Harden": [],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": false,
+      "provenance": [],
+      "needs_provenance_review": true
+    },
+    {
+      "id": "proonestarthub",
+      "lead": [
+        "",
+        "    # ProOneStartHub / ProOneStartPDF - rebranded OneStart distribution (installers proonestarthub.msi / proonestartpdf.msi); same",
+        "    # TamperedChef/AppSuite cluster, DROPS onestart.exe - so the runtime process and the OneStart vendor tree are ALREADY covered by",
+        "    # the OneStart entries above (onestart.exe in Proc; \"ProOneStartHub\" matches the OneStart-substring Rx). Pushed via Google",
+        "    # malvertising from proonestarthub.com (redirect/C2 brightfuturedevpers.org). Tagged adware/advancedinstaller/loader+stealer on",
+        "    # any.run / Joe Sandbox (proonestarthub.msi, proonestartpdf.msi). This entry adds a banner label, hardens the branded",
+        "    # install/uninstall folder against reinstall, and serves as a regression anchor; it intentionally lists no Proc (the live",
+        "    # process is onestart.exe, killed above) and no Pub (signer rotates; the cert sweep + OneStart Pub cover that)."
+      ],
+      "Name": "ProOneStartHub",
+      "Label": "ProOneStartHub",
+      "Rx": "(?i)(ProOneStartHub|ProOneStartPDF)",
+      "Proc": [],
+      "Pub": "",
+      "Nw": false,
+      "Harden": [
+        "Local\\ProOneStartHub",
+        "Roaming\\ProOneStartHub",
+        "Local\\Programs\\ProOneStartHub"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": true,
+      "provenance": [
+        "proonestarthub.com",
+        "brightfuturedevpers.org"
+      ],
+      "needs_provenance_review": false
+    },
+    {
+      "id": "onebrowser",
+      "lead": [
+        "",
+        "    # OneBrowser - Chromium-based PUA in the TamperedChef-adjacent ecosystem. Palo Alto Unit 42 tracks WORK PRODUCT, INC.",
+        "    # as a OneBrowser signer. Installs under %LOCALAPPDATA%\\OB or \\OneBrowser (also %ProgramFiles%\\OB); persistence uses",
+        "    # OBUpdate / OneBUpdate tasks, OneBrowser App Paths, Software\\OB / Software\\OneBrowser, and OBUpdateService.exe or",
+        "    # OneBUpdateService.exe. The short \"OB\" folder is guarded by static filename/hash/signer evidence to avoid false positives.",
+        "    # User-supplied Joe Sandbox sample (never executed here): SHA256 fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957;",
+        "    # signer CN=Work Product Inc., cert SHA256 96459CC59004DD82885E3AEBACD5A9AD869AC517D5E2A4FEC8BCC417D6BB8705."
+      ],
+      "Name": "OneBrowser",
+      "Label": "OneBrowser",
+      "Rx": "(?i)(\\bOneBrowser\\b|\\bOneB(?:rowser)?Update(?:Service)?\\b|\\bOBUpdate(?:Service)?\\b)",
+      "Proc": [
+        "OneBrowser",
+        "OBUpdateService",
+        "OneBUpdateService"
+      ],
+      "Pub": "(?i)Work\\s*Product\\s*,?\\s*Inc\\.?",
+      "Nw": false,
+      "Harden": [
+        "Local\\OneBrowser",
+        "Local\\Programs\\OneBrowser"
+      ],
+      "Aliases": [
+        "OB"
+      ],
+      "RegNames": [
+        "OneBrowser",
+        "OB"
+      ],
+      "Hashes": [
+        "fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957"
+      ],
+      "requires_manual_regex": true,
+      "provenance": [],
+      "needs_provenance_review": true
+    },
+    {
+      "id": "manualfinder",
+      "lead": [
+        "",
+        "    # ManualFinder / ManualFinderApp / AllManualsFinder - trojanized \"find product manuals\" installer; TamperedChef/AppSuite/BaoLoader,",
+        "    # SAME operators as OneStart (G DATA/Expel/Sophos; shared C2 mka3e8.com). NOT mere adware: infostealer/loader (Chromium cred+cookie",
+        "    # theft, residential proxy) - treat a hit as a COMPROMISE IOC. ManualFinderApp.exe signed by \"GLINT SOFTWARE SDN. BHD.\" (revoked).",
+        "    # Detections: Sophos Mal/Isher-Gen / Troj/EvilAI-H, MS Trojan:Win64/InfoStealer!MSR. Install: %LOCALAPPDATA%\\{ManualFinder,",
+        "    # Programs\\ManualFinder}; persistence = scheduled task -> node.exe runs a GUID .js in %TEMP%. Siblings under Programs\\:",
+        "    # AllManualsReader/OpenMyManual/ManualReaderPro/TotalUserManuals (caught by Rx). Full SHA256: app 71edb9f9..c2a51, MSI ed797beb..b2871.",
+        "    # Generic loader processes (node/msiexec/mshta/powershell/cmd/svchost) are NOT in Proc - OS/legit; malicious node.exe caught by path-Rx."
+      ],
+      "Name": "ManualFinder",
+      "Label": "ManualFinder",
+      "Rx": "(?i)(manualfinder|allmanualsfinder|allmanualsreader|openmymanual|manualreaderpro|totalusermanuals|pdfeditorupdater)",
+      "Proc": [
+        "ManualFinderApp",
+        "AllManualsReader",
+        "OpenMyManual",
+        "ManualReaderPro",
+        "TotalUserManuals"
+      ],
+      "Pub": "(?i)(GLINT SOFTWARE SDN\\.? BHD|GLINT By J SDN\\.? BHD|ECHO\\s*INFINI SDN\\.? BHD|SUMMIT NEXUS Holdings)",
+      "Nw": false,
+      "Harden": [
+        "Local\\ManualFinder",
+        "Local\\Programs\\ManualFinder",
+        "Roaming\\ManualFinder"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": true,
+      "provenance": [
+        "mka3e8.com"
+      ],
+      "needs_provenance_review": false
+    },
+    {
+      "id": "kitchencanvas",
+      "lead": [
+        "",
+        "    # KitchenCanvas - fake \"AI meal-planner / recipe\" app; TamperedChef/AppSuite cluster (Sophos/Unit42/Truesec/any.run/Joe Sandbox).",
+        "    # Google malvertising from kitchen-canvas.com -> CloudFront CDN (e.g. d1q9yii5cruf0d.cloudfront.net/KitchenCanvas-Setup-<ver>.exe),",
+        "    # saved locally as RecipeSetup_<digits>.exe - a per-download RANDOMIZED installer name with NO \"KitchenCanvas\" in it, so the Rx must",
+        "    # catch BOTH the installed app (KitchenCanvas) AND the RecipeSetup dropper. \\bRecipeSetup[-_] is anchored to the cluster's _/- suffix",
+        "    # so it can't hit a legit \"Recipe Setup.exe\". Loader: enumerates browser/proxy/installed-programs, scheduled-task + startup",
+        "    # persistence, lies dormant for weeks, then pulls stealer/RAT/proxyware. Process KitchenCanvas.exe; install %LOCALAPPDATA%\\Programs\\",
+        "    # KitchenCanvas. Signer rotates (cert sweep covers it); no Pub pinned. Variants KitchenCanvas_<digits>.exe in the sandboxes."
+      ],
+      "Name": "KitchenCanvas",
+      "Label": "KitchenCanvas",
+      "Rx": "(?i)(\\bKitchenCanvas|\\bRecipeSetup[-_])",
+      "Proc": [
+        "KitchenCanvas"
+      ],
+      "Pub": "",
+      "Nw": false,
+      "Harden": [
+        "Local\\KitchenCanvas",
+        "Roaming\\KitchenCanvas",
+        "Local\\Programs\\KitchenCanvas"
+      ],
+      "Aliases": [],
+      "RegNames": [],
+      "Hashes": [],
+      "requires_manual_regex": true,
+      "provenance": [
+        "kitchen-canvas.com",
+        "d1q9yii5cruf0d.cloudfront.net/KitchenCanvas-Setup-<ver>.exe"
+      ],
+      "needs_provenance_review": false
+    },
+    {
+      "id": "shiftbrowser",
+      "lead": [
+        "",
+        "    # Shift Browser - user-supplied ANY.RUN URL analysis (task 8498066e-0e2c-4f80-bbfa-2d873d5be2a2; never downloaded or",
+        "    # executed here). Observed v147.1.1.366 under %LOCALAPPDATA%\\Shift\\chromium\\shift.exe, installer Shift_hwemja.exe /",
+        "    # shift-v147.1.1-web.exe, and persistence task ShiftLaunchTask. Shift is a legitimate signed product, so neither the",
+        "    # generic process name nor its publisher is globally blocklisted. The generic Shift folder/key is guarded by static",
+        "    # path, filename, or signer evidence before removal."
+      ],
+      "Name": "ShiftBrowser",
+      "Label": "ShiftBrowser",
+      "Rx": "(?i)(\\bShiftLaunchTask\\b|\\\\Shift\\\\chromium\\\\shift\\.exe\\b|\\bShift Browser\\b|\\bShift_[a-z]{6}\\.(?:exe|tmp)\\b|\\bshift-v147\\.1\\.1-web\\.exe\\b)",
+      "Proc": [],
+      "Pub": "(?i)^Shift Technologies Inc\\.?$",
+      "Nw": false,
+      "Harden": [],
+      "Aliases": [
+        "Shift"
+      ],
+      "RegNames": [
+        "Shift"
+      ],
+      "Hashes": [],
+      "requires_manual_regex": true,
+      "provenance": [
+        "task 8498066e-0e2c-4f80-bbfa-2d873d5be2a2"
+      ],
+      "needs_provenance_review": false
+    }
+  ],
+  "banner_line": "$puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')",
+  "signers_comment": [
+    "",
+    "# Code-signing publishers abused (almost) exclusively by this PUA cluster (TamperedChef / BaoLoader / AppSuite). Deliberately",
+    "# limited to DISTINCTIVE shell-company subjects so a signer match is safe to act on; the cluster's more generically named",
+    "# US-shell certs are covered by name/path via $Puas instead, to avoid false positives against legitimately-named vendors."
+  ],
+  "bad_signers": [
+    "GLINT SOFTWARE SDN",
+    "GLINT By J SDN",
+    "ECHO INFINI SDN",
+    "SUMMIT NEXUS Holdings",
+    "Byte Media Sdn",
+    "OneStart Technologies",
+    "Caerus Media",
+    "VAST LAKE",
+    "Work Product Inc.",
+    "WORK PRODUCT, INC."
+  ],
+  "bad_signer_rx_line": "$BadSignerRx = '(?i)(' + (($BadSigners | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')'"
+}

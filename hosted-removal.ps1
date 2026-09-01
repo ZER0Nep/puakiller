@@ -167,9 +167,13 @@ function Send-Stat([string]$Phase) {
 }
 
 # ============================================================================
-#  PUA REGISTRY  --  TO ADD A NEW PUA, ADD ONE ENTRY TO $Puas BELOW. Nothing
-#  else needs editing: the sweep, the on-screen banner, the -Harden reinstall
-#  blockers and the final verification list are all derived from this list.
+#  PUA REGISTRY  --  GENERATED BLOCK. Do not edit $Puas or $BadSigners here.
+#  The source of truth is rules/catalog.json. Edit that, then run
+#      python3 scripts/apply-generated.py --write
+#  which rewrites this region in BOTH scripts. CI fails if the two drift apart
+#  (scripts/verify-generated.py). Everything downstream -- the sweep, the
+#  on-screen banner, the -Harden reinstall blockers and the final verification
+#  list -- is still derived from this list, so a catalog entry is all you add.
 #
 #  Fields:
 #    Name   = top-level install-folder name. The folder sweep deletes
@@ -196,9 +200,9 @@ function Send-Stat([string]$Phase) {
 #             top-level downloaded executables (static hashing; never execute).
 # ============================================================================
 $Puas = @(
-    @{ Name='OpenBook';    Label='OpenBook';    Rx='(?i)\bOpenBook\b';    Proc=@('OpenBook');    Pub='';                            Nw=$true;  Harden=@('Local\OpenBook','Roaming\OpenBook') },
-    @{ Name='ConvertMate'; Label='ConvertMate'; Rx='(?i)\bConvertMate\b'; Proc=@('ConvertMate'); Pub='(?i)Amaryllis';                Nw=$false; Harden=@('Local\ConvertMate') },
-    @{ Name='PDFEditor';   Label='PDFEditor';   Rx='(?i)\bPDFEditor\b';   Proc=@('PDFEditor');   Pub='(?i)(AppSuite|Eclipse Media)'; Nw=$false; Harden=@('Local\PDFEditor','Roaming\PDFEditor','Local\Programs\PDFEditor') },
+    @{ Name='OpenBook'; Label='OpenBook'; Rx='(?i)\bOpenBook\b'; Proc=@('OpenBook'); Pub=''; Nw=$true; Harden=@('Local\OpenBook','Roaming\OpenBook') },
+    @{ Name='ConvertMate'; Label='ConvertMate'; Rx='(?i)\bConvertMate\b'; Proc=@('ConvertMate'); Pub='(?i)Amaryllis'; Nw=$false; Harden=@('Local\ConvertMate') },
+    @{ Name='PDFEditor'; Label='PDFEditor'; Rx='(?i)\bPDFEditor\b'; Proc=@('PDFEditor'); Pub='(?i)(AppSuite|Eclipse Media)'; Nw=$false; Harden=@('Local\PDFEditor','Roaming\PDFEditor','Local\Programs\PDFEditor') },
 
     # EpiBrowser / EpiStart - Chromium-clone PUA. Vendor folder %LOCALAPPDATA%\EPISoftware (all-caps EPI); abused cert
     # "Byte Media Sdn. Bhd." (TamperedChef cluster). Verified: todyl.com/blog/epibrowser, pcrisk #32056, file.net, any.run.
@@ -217,7 +221,7 @@ $Puas = @(
     # Full SHA256: installer fb64aad2..f86cfd, app 246e8d6a..f7c9c0, MSI d2690d69..4c392a (any.run). Two entries: 'OneStart.ai'
     # clears the Local vendor tree; 'OneStart' (Label hidden) catches %APPDATA%\OneStart + Programs/Start-Menu folders.
     @{ Name='OneStart.ai'; Label='OneStart'; Rx='(?i)OneStart'; Proc=@('onestart'); Pub='(?i)(OneStart\.ai|OneStart Technologies|Caerus Media)'; Nw=$false; Harden=@('Local\OneStart.ai','Roaming\OneStart','Local\Programs\OneStart.ai') },
-    @{ Name='OneStart';    Label='';         Rx='(?i)\bOneStart\b'; Proc=@(); Pub=''; Nw=$false; Harden=@() },
+    @{ Name='OneStart'; Label=''; Rx='(?i)\bOneStart\b'; Proc=@(); Pub=''; Nw=$false; Harden=@() },
 
     # ProOneStartHub / ProOneStartPDF - rebranded OneStart distribution (installers proonestarthub.msi / proonestartpdf.msi); same
     # TamperedChef/AppSuite cluster, DROPS onestart.exe - so the runtime process and the OneStart vendor tree are ALREADY covered by

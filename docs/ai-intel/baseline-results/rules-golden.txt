@@ -1,0 +1,26 @@
+hosted-removal.ps1|OpenBook|OpenBook|(?i)\bOpenBook\b|OpenBook||True|Local\OpenBook,Roaming\OpenBook|||
+hosted-removal.ps1|ConvertMate|ConvertMate|(?i)\bConvertMate\b|ConvertMate|(?i)Amaryllis|False|Local\ConvertMate|||
+hosted-removal.ps1|PDFEditor|PDFEditor|(?i)\bPDFEditor\b|PDFEditor|(?i)(AppSuite|Eclipse Media)|False|Local\PDFEditor,Roaming\PDFEditor,Local\Programs\PDFEditor|||
+hosted-removal.ps1|EPISoftware|EpiBrowser|(?i)(EPISoftware|EpiBrowser|Epi\s+Browser|EpiStart)|epibrowser,setup.epibrowser|(?i)(EPISoftware|EPI\s*Software)|False|Local\EPISoftware,Roaming\EPISoftware,Local\Programs\EPISoftware|||
+hosted-removal.ps1|OneStart.ai|OneStart|(?i)OneStart|onestart|(?i)(OneStart\.ai|OneStart Technologies|Caerus Media)|False|Local\OneStart.ai,Roaming\OneStart,Local\Programs\OneStart.ai|||
+hosted-removal.ps1|OneStart||(?i)\bOneStart\b|||False||||
+hosted-removal.ps1|ProOneStartHub|ProOneStartHub|(?i)(ProOneStartHub|ProOneStartPDF)|||False|Local\ProOneStartHub,Roaming\ProOneStartHub,Local\Programs\ProOneStartHub|||
+hosted-removal.ps1|OneBrowser|OneBrowser|(?i)(\bOneBrowser\b|\bOneB(?:rowser)?Update(?:Service)?\b|\bOBUpdate(?:Service)?\b)|OneBrowser,OBUpdateService,OneBUpdateService|(?i)Work\s*Product\s*,?\s*Inc\.?|False|Local\OneBrowser,Local\Programs\OneBrowser|OB|OneBrowser,OB|fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957
+hosted-removal.ps1|ManualFinder|ManualFinder|(?i)(manualfinder|allmanualsfinder|allmanualsreader|openmymanual|manualreaderpro|totalusermanuals|pdfeditorupdater)|ManualFinderApp,AllManualsReader,OpenMyManual,ManualReaderPro,TotalUserManuals|(?i)(GLINT SOFTWARE SDN\.? BHD|GLINT By J SDN\.? BHD|ECHO\s*INFINI SDN\.? BHD|SUMMIT NEXUS Holdings)|False|Local\ManualFinder,Local\Programs\ManualFinder,Roaming\ManualFinder|||
+hosted-removal.ps1|KitchenCanvas|KitchenCanvas|(?i)(\bKitchenCanvas|\bRecipeSetup[-_])|KitchenCanvas||False|Local\KitchenCanvas,Roaming\KitchenCanvas,Local\Programs\KitchenCanvas|||
+hosted-removal.ps1|ShiftBrowser|ShiftBrowser|(?i)(\bShiftLaunchTask\b|\\Shift\\chromium\\shift\.exe\b|\bShift Browser\b|\bShift_[a-z]{6}\.(?:exe|tmp)\b|\bshift-v147\.1\.1-web\.exe\b)||(?i)^Shift Technologies Inc\.?$|False||Shift|Shift|
+hosted-removal.ps1|BADSIGNERS|GLINT SOFTWARE SDN,GLINT By J SDN,ECHO INFINI SDN,SUMMIT NEXUS Holdings,Byte Media Sdn,OneStart Technologies,Caerus Media,VAST LAKE,Work Product Inc.,WORK PRODUCT, INC.
+hosted-removal.ps1|PULSEREGEX|(?i)(PulseSoftware|PulseBrowser|Pulse\s+Browser|Pulse\s+Software)
+PUAKILLER-LOCAL.ps1|OpenBook|OpenBook|(?i)\bOpenBook\b|OpenBook||True|Local\OpenBook,Roaming\OpenBook|||
+PUAKILLER-LOCAL.ps1|ConvertMate|ConvertMate|(?i)\bConvertMate\b|ConvertMate|(?i)Amaryllis|False|Local\ConvertMate|||
+PUAKILLER-LOCAL.ps1|PDFEditor|PDFEditor|(?i)\bPDFEditor\b|PDFEditor|(?i)(AppSuite|Eclipse Media)|False|Local\PDFEditor,Roaming\PDFEditor,Local\Programs\PDFEditor|||
+PUAKILLER-LOCAL.ps1|EPISoftware|EpiBrowser|(?i)(EPISoftware|EpiBrowser|Epi\s+Browser|EpiStart)|epibrowser,setup.epibrowser|(?i)(EPISoftware|EPI\s*Software)|False|Local\EPISoftware,Roaming\EPISoftware,Local\Programs\EPISoftware|||
+PUAKILLER-LOCAL.ps1|OneStart.ai|OneStart|(?i)OneStart|onestart|(?i)(OneStart\.ai|OneStart Technologies|Caerus Media)|False|Local\OneStart.ai,Roaming\OneStart,Local\Programs\OneStart.ai|||
+PUAKILLER-LOCAL.ps1|OneStart||(?i)\bOneStart\b|||False||||
+PUAKILLER-LOCAL.ps1|ProOneStartHub|ProOneStartHub|(?i)(ProOneStartHub|ProOneStartPDF)|||False|Local\ProOneStartHub,Roaming\ProOneStartHub,Local\Programs\ProOneStartHub|||
+PUAKILLER-LOCAL.ps1|OneBrowser|OneBrowser|(?i)(\bOneBrowser\b|\bOneB(?:rowser)?Update(?:Service)?\b|\bOBUpdate(?:Service)?\b)|OneBrowser,OBUpdateService,OneBUpdateService|(?i)Work\s*Product\s*,?\s*Inc\.?|False|Local\OneBrowser,Local\Programs\OneBrowser|OB|OneBrowser,OB|fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957
+PUAKILLER-LOCAL.ps1|ManualFinder|ManualFinder|(?i)(manualfinder|allmanualsfinder|allmanualsreader|openmymanual|manualreaderpro|totalusermanuals|pdfeditorupdater)|ManualFinderApp,AllManualsReader,OpenMyManual,ManualReaderPro,TotalUserManuals|(?i)(GLINT SOFTWARE SDN\.? BHD|GLINT By J SDN\.? BHD|ECHO\s*INFINI SDN\.? BHD|SUMMIT NEXUS Holdings)|False|Local\ManualFinder,Local\Programs\ManualFinder,Roaming\ManualFinder|||
+PUAKILLER-LOCAL.ps1|KitchenCanvas|KitchenCanvas|(?i)(\bKitchenCanvas|\bRecipeSetup[-_])|KitchenCanvas||False|Local\KitchenCanvas,Roaming\KitchenCanvas,Local\Programs\KitchenCanvas|||
+PUAKILLER-LOCAL.ps1|ShiftBrowser|ShiftBrowser|(?i)(\bShiftLaunchTask\b|\\Shift\\chromium\\shift\.exe\b|\bShift Browser\b|\bShift_[a-z]{6}\.(?:exe|tmp)\b|\bshift-v147\.1\.1-web\.exe\b)||(?i)^Shift Technologies Inc\.?$|False||Shift|Shift|
+PUAKILLER-LOCAL.ps1|BADSIGNERS|GLINT SOFTWARE SDN,GLINT By J SDN,ECHO INFINI SDN,SUMMIT NEXUS Holdings,Byte Media Sdn,OneStart Technologies,Caerus Media,VAST LAKE,Work Product Inc.,WORK PRODUCT, INC.
+PUAKILLER-LOCAL.ps1|PULSEREGEX|(?i)(PulseSoftware|PulseBrowser|Pulse\s+Browser|Pulse\s+Software)
