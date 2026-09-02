@@ -1,0 +1,26 @@
+[
+  {
+    "url": "https://www.hybrid-analysis.com/api/v2/key/current",
+    "status": 200,
+    "body": "{\"api_key\": \"REDACTED-NOT-A-REAL-KEY\", \"auth_level_name\": \"default\", \"limits\": {\"quota\": 200}}",
+    "fetched_at": "2026-09-02T00:00:00Z"
+  },
+  {
+    "url": "https://www.hybrid-analysis.com/api/v2/overview/246e8d6a000000000000000000000000000000000000000000000000f7c9c012",
+    "status": 200,
+    "body": "{\"sha256\": \"246e8d6a000000000000000000000000000000000000000000000000f7c9c012\", \"submit_name\": \"OneStartSetup.exe\", \"analysis_start_time\": \"2026-08-20T10:00:00Z\", \"certificates\": [{\"owner\": \"OneStart Technologies LLC\"}], \"processes\": [{\"name\": \"onestart.exe\"}, {\"name\": \"C:\\\\Windows\\\\System32\\\\schtasks.exe\"}], \"related_reports\": [{\"job_id\": \"abcd1234efgh\"}, {\"job_id\": \"zzzz9999wwww\"}], \"command_line\": \"C:\\\\Users\\\\vmuser\\\\Desktop\\\\OneStartSetup.exe /silent\", \"extracted_files\": [{\"file_path\": \"C:\\\\Users\\\\vmuser\\\\AppData\\\\Local\\\\Temp\\\\x.tmp\"}], \"hosts\": [\"10.0.2.15\"]}",
+    "fetched_at": "2026-09-02T00:00:00Z"
+  },
+  {
+    "url": "https://www.hybrid-analysis.com/api/v2/report/abcd1234efgh/summary",
+    "status": 200,
+    "body": "{\"sha256\": \"246e8d6a000000000000000000000000000000000000000000000000f7c9c012\", \"job_id\": \"abcd1234efgh\", \"submit_name\": \"OneStartSetup.exe\", \"analysis_start_time\": \"2026-08-21T11:30:00Z\", \"certificates\": [{\"subject\": \"Caerus Media LLC\"}], \"processes\": [{\"name\": \"onestart.exe\"}]}",
+    "fetched_at": "2026-09-02T00:00:00Z"
+  },
+  {
+    "url": "https://www.hybrid-analysis.com/api/v2/report/zzzz9999wwww/summary",
+    "status": 200,
+    "body": "{\"sha256\": \"246e8d6a000000000000000000000000000000000000000000000000f7c9c012\", \"job_id\": \"zzzz9999wwww\", \"submit_name\": \"C:\\\\Users\\\\jdoe\\\\Desktop\\\\payload.exe\", \"analysis_start_time\": \"2026-08-22T09:00:00Z\", \"processes\": [{\"name\": \"analyst.name@company.example\"}]}",
+    "fetched_at": "2026-09-02T00:00:00Z"
+  }
+]

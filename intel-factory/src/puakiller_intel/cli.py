@@ -1,14 +1,18 @@
 """Command line entry point.
 
-    python -m puakiller_intel run --family OneStart
+    python -m puakiller_intel run --family OneStart --seed onestart
+    python -m puakiller_intel run --mode collect --dry-run --family X --seed <sha256>
     python -m puakiller_intel policy --mode collect
+    python -m puakiller_intel cache --purge-older-than 30
     python -m puakiller_intel fixtures
 
 The default mode is ``fixture``: no network, no key, no cost, no paid model call. That is what
-lets the pipeline run in CI and on a laptop, and it is what phase 2 is specified to deliver.
-Live modes exist in the parser so each one's outbound policy is printable today, but the
-providers behind them arrive in later phases, and the CLI says so rather than failing with
-something cryptic.
+lets the pipeline run in CI and on a laptop.
+
+``collect`` reaches Hybrid Analysis, read-only, and refuses to start without a key rather than
+returning an empty result set -- an empty collector is indistinguishable from a collector that
+found nothing. ``--dry-run`` prints the exact destination list without sending anything, which
+is the review step before granting the container network access.
 
 Exit codes:
     0  a candidate was produced and routed
@@ -22,12 +26,15 @@ import argparse
 import sys
 from pathlib import Path
 
+from .config import Config, ConfigError
 from .critic import BenignCatalog
+from .hybrid_analysis import HybridAnalysisError, HybridAnalysisProvider, plan_requests
 from .llm import DisabledLLM, FakeDeterministicLLM
 from .pipeline import render_report, run_pipeline, write_outputs
 from .providers import FixtureProvider, ProviderError
 from .scout import ScoutError
 from .security import ForbiddenDataError, OutboundPolicy, redact_secrets
+from .transport import DryRunBlocked, ReadOnlyHttpClient, TransportError
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 INTEL_ROOT = PACKAGE_ROOT.parent.parent
@@ -60,6 +67,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--llm", default="fake", choices=["fake", "disabled"], help="default: deterministic fake")
     run.add_argument("--triage", action="store_true", help="enable the optional Triage adapter (off by default)")
+    run.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="plan every request and print the destinations, then send nothing",
+    )
+
+    cache = sub.add_parser("cache", help="inspect or prune the response cache")
+    cache.add_argument("--purge-older-than", type=int, default=None, metavar="DAYS")
 
     policy = sub.add_parser("policy", help="print the outbound network policy for a mode")
     policy.add_argument("--mode", default="fixture", choices=MODES)
@@ -101,25 +116,64 @@ def cmd_fixtures(args) -> int:
     return 0
 
 
-def cmd_run(args) -> int:
-    if args.mode != "fixture":
-        print(
-            f"error: mode {args.mode!r} needs a live provider, which arrives in a later phase. "
-            f"Use --mode fixture, or run 'policy --mode {args.mode}' to see what it would contact.",
-            file=sys.stderr,
-        )
-        return 2
+def _build_provider(args, policy):
+    """Pick the provider for the requested mode, and fail loudly for the ones not built yet."""
+    if args.mode == "fixture":
+        return FixtureProvider(args.fixtures), None
 
+    if args.mode == "collect":
+        config = Config.from_env(mode="collect", dry_run=args.dry_run)
+        client = ReadOnlyHttpClient(config, policy)
+        return HybridAnalysisProvider(client, config), config
+
+    raise ProviderError(
+        f"mode {args.mode!r} has no provider yet. Use --mode fixture or --mode collect, or run "
+        f"'policy --mode {args.mode}' to see what it would contact."
+    )
+
+
+def cmd_cache(args) -> int:
+    config = Config.from_env(mode="fixture")
+    cache = ReadOnlyHttpClient(config, OutboundPolicy(mode="fixture")).cache
+    if args.purge_older_than is None:
+        entries = len(list(cache.directory.glob("*.json"))) if cache.directory.is_dir() else 0
+        print(f"cache dir : {cache.directory}")
+        print(f"entries   : {entries}")
+        print(f"ttl       : {config.cache_ttl_seconds}s")
+        print(f"retention : {config.raw_retention_days} days")
+        return 0
+    removed = cache.purge_older_than(args.purge_older_than)
+    print(f"purged {removed} entr{'y' if removed == 1 else 'ies'} older than {args.purge_older_than} days")
+    return 0
+
+
+def cmd_run(args) -> int:
     policy = OutboundPolicy(mode=args.mode, triage_enabled=args.triage)
     seeds = args.seed or [args.family]
 
     try:
-        provider = FixtureProvider(args.fixtures)
+        provider, config = _build_provider(args, policy)
+
+        # A dry run stops here, on purpose: it prints the exact destination list an operator
+        # needs in order to decide whether to grant this container network access at all.
+        if getattr(args, "dry_run", False):
+            print(f"DRY RUN -- nothing will be sent. {policy.describe()}")
+            if config is not None:
+                print(config.describe())
+            planned = plan_requests(provider, seeds) if config is not None else []
+            if not planned:
+                print("  no outbound request would be made")
+            for line in planned:
+                print(f"  would GET {line}")
+            return 0
+
         if not Path(args.benign).is_file():
             raise ProviderError(f"benign corpus not found: {args.benign}")
         BenignCatalog.load(args.benign)  # fail early, rather than after the model call
 
-        config = {
+        # Named apart from the provider Config above: shadowing the two would make it easy to
+        # hand a Secret-bearing object to the pipeline, which has no business holding one.
+        run_config = {
             "mode": args.mode,
             "seeds": sorted(seeds),
             "family": args.family,
@@ -132,7 +186,7 @@ def cmd_run(args) -> int:
             seeds=seeds,
             family=args.family,
             benign_path=args.benign,
-            config=config,
+            config=run_config,
         )
     except ForbiddenDataError as exc:
         # The most important failure in the tool: loud, specific about the class of data, and
@@ -140,7 +194,15 @@ def cmd_run(args) -> int:
         print(f"REFUSED: {exc}", file=sys.stderr)
         print("Nothing was sent anywhere. Fix the source; do not sanitise it by hand.", file=sys.stderr)
         return 2
-    except (ProviderError, ScoutError) as exc:
+    except ConfigError as exc:
+        # A live mode that cannot work must say so rather than return an empty result set: an
+        # empty collector is indistinguishable from a collector that found nothing.
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except DryRunBlocked as exc:
+        print(f"dry run stopped before sending: {exc}", file=sys.stderr)
+        return 0
+    except (ProviderError, ScoutError, HybridAnalysisError, TransportError) as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
         return 2
 
@@ -156,7 +218,8 @@ def cmd_run(args) -> int:
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
-    return {"run": cmd_run, "policy": cmd_policy, "fixtures": cmd_fixtures}[args.command](args)
+    handlers = {"run": cmd_run, "policy": cmd_policy, "fixtures": cmd_fixtures, "cache": cmd_cache}
+    return handlers[args.command](args)
 
 
 if __name__ == "__main__":

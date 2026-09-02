@@ -59,6 +59,13 @@ jobs:
         shell: bash
         run: python3 intel-factory/tests/test_intel_factory.py
 
+      - name: Hybrid Analysis contract tests (recorded cassettes, no key, no network)
+        shell: bash
+        # Live tests are skipped unless PUAKILLER_INTEL_LIVE_TESTS=1 and a key are both set.
+        # CI sets neither, on purpose: a suite that reaches the internet when a key happens to
+        # be present is a suite nobody can trust to be offline.
+        run: python3 intel-factory/tests/test_hybrid_analysis.py
+
       - name: Intel factory reaches nothing in its default mode
         shell: bash
         run: |
