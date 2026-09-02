@@ -32,7 +32,12 @@ x-common: &common
     PYTHONDONTWRITEBYTECODE: "1"
     PYTHONUNBUFFERED: "1"
   read_only: true
-  user: "10001:10001"
+  # The container writes only to the ./data bind mount, so it has to be a uid that owns it.
+  # Hardcoding 10001 meant every operator had to chown the directory before the first run, and
+  # discovered that through a Permission denied on run.lock. run-cycle.sh exports the invoking
+  # user's ids, and .env carries them for anything run by hand. The 10001 fallback is the
+  # image's own unprivileged user, so a missing value still never lands on root.
+  user: "${HOST_UID:-10001}:${HOST_GID:-10001}"
   cap_drop: ["ALL"]
   security_opt: ["no-new-privileges:true"]
   tmpfs:

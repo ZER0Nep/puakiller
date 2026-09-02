@@ -81,7 +81,7 @@ systemctl list-timers 'puakiller-intel*'
 | `network_mode: none` | `compose.yaml`, service `intel` | The default service reaching anything at all |
 | `profiles: ["online"]` | service `intel-online` | The networked service starting by accident |
 | `read_only: true` | both | The container writing to its own code |
-| `user: "10001:10001"`, `cap_drop: ALL`, `no-new-privileges` | both | Privilege escalation from hostile web content |
+| `user: "${HOST_UID:-10001}"`, `cap_drop: ALL`, `no-new-privileges` | both | Privilege escalation from hostile web content |
 | `mem_limit`, `cpus`, `pids_limit` | both | One bad report costing the host |
 | `env_file` | both | Secrets ending up in the image or the repository |
 | `--lock` | inside the container | Two cycles overlapping and doubling the request rate |

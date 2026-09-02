@@ -39,19 +39,16 @@ git clone https://github.com/ZER0Nep/puakiller.git
 cd puakiller/deploy
 cp .env.example .env
 chmod 600 .env
-mkdir -p data/out data/state data/logs data/backups
+printf 'HOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
 ```
 
-Le conteneur tourne sous l'uid 10001 et le système de fichiers de l'image est en lecture seule.
-Il écrit uniquement dans `deploy/data`, monté depuis l'hôte, donc ce répertoire doit lui
-appartenir :
+La troisième ligne dit au conteneur de tourner sous ton uid. Il écrit uniquement dans
+`deploy/data`, monté depuis l'hôte, donc il doit être quelqu'un qui a le droit d'y écrire.
+`run-cycle.sh` exporte ces deux valeurs tout seul ; les mettre dans `.env` fait que les
+commandes lancées à la main se comportent pareil.
 
-```bash
-sudo chown -R 10001:10001 data
-```
-
-Oublier cette ligne est la première erreur que tu rencontreras. Elle se manifeste par un
-`Permission denied` sur `/data/state/run.lock` au premier cycle.
+Ne mets jamais 0. Le script refuse de démarrer sous root, sinon le conteneur hériterait de
+l'uid 0 et toute la posture non privilégiée avec.
 
 Construis l'image :
 
@@ -264,7 +261,8 @@ exacts. Aucun de ces chemins n'écrit une règle. Une règle reste écrite à la
 
 | Ce que tu vois | Ce que c'est | Le geste |
 |---|---|---|
-| `Permission denied` sur `/data/...` | `deploy/data` n'appartient pas à l'uid 10001 | `sudo chown -R 10001:10001 data` |
+| `Permission denied` sur `/data/...` | `HOST_UID` absent de `.env`, sur une commande lancée à la main | `printf 'HOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" >> .env` |
+| `refusing to run as root` | `run-cycle.sh` lancé sous root ou via sudo | Relance sous un utilisateur normal, et vérifie `RUN_AS` dans l'unité systemd |
 | `env file .env not found` | Le fichier n'a pas été copié | `cp .env.example .env && chmod 600 .env` |
 | `mode 'collect' needs HYBRID_ANALYSIS_API_KEY` | Clé absente, ou fins de ligne CRLF dans `.env` | Vérifie avec `file .env`, réécris en LF |
 | `skipped: another run holds run.lock` | Un cycle tourne déjà | Rien. Le prochain tick reprendra |

@@ -17,6 +17,7 @@ stops being true. These assert the ones that matter against the actual files:
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -222,9 +223,22 @@ class TestContainerShape(unittest.TestCase):
         for name, service in self.services.items():
             with self.subTest(service=name):
                 self.assertTrue(service["read_only"], name)
-                self.assertNotEqual(service["user"].split(":")[0], "0")
                 self.assertEqual(service["cap_drop"], ["ALL"])
                 self.assertIn("no-new-privileges:true", service["security_opt"])
+
+    def test_the_uid_follows_the_operator_and_falls_back_unprivileged(self):
+        """Hardcoding a uid made every operator chown ./data before the first run.
+
+        Substitution has a hole a plain literal did not: an empty or hostile HOST_UID. The
+        fallback has to be the image's own unprivileged user, and it has to be non-zero.
+        """
+        pattern = re.compile(r"^\$\{HOST_UID:-(\d+)\}:\$\{HOST_GID:-(\d+)\}$")
+        for name, service in self.services.items():
+            with self.subTest(service=name):
+                match = pattern.match(service["user"])
+                self.assertIsNotNone(match, f"{name} user is {service['user']!r}")
+                self.assertNotEqual(match.group(1), "0", "the uid fallback must not be root")
+                self.assertNotEqual(match.group(2), "0", "the gid fallback must not be root")
 
     def test_every_service_is_capped(self):
         for name, service in self.services.items():
@@ -310,6 +324,19 @@ class TestShellScripts(unittest.TestCase):
     def test_a_refused_candidate_does_not_fail_the_unit(self):
         source = (DEPLOY / "install-systemd.sh").read_text(encoding="utf-8")
         self.assertIn("SuccessExitStatus=0 1", source)
+
+    def test_the_cycle_refuses_to_run_as_root(self):
+        """Under root the container would inherit uid 0, and every other control with it."""
+        source = (DEPLOY / "run-cycle.sh").read_text(encoding="utf-8")
+        self.assertIn('if [ "$(id -u)" -eq 0 ]; then', source)
+        self.assertIn("refusing to run as root", source)
+
+    def test_the_cycle_exports_the_operators_ids(self):
+        source = (DEPLOY / "run-cycle.sh").read_text(encoding="utf-8")
+        self.assertIn('export HOST_UID="$(id -u)"', source)
+        self.assertIn('export HOST_GID="$(id -g)"', source)
+        # Exported before the first docker invocation, or the substitution happens too late.
+        self.assertLess(source.index("export HOST_UID"), source.index("COMPOSE[@]"))
 
     def test_the_backup_runs_before_the_cycle_not_after(self):
         """A backup taken after the damage is a copy of the damage."""

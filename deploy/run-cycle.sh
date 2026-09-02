@@ -29,6 +29,17 @@ FAMILY="${1:-OneStart}"
 shift || true
 SEEDS=("$@")
 
+# The container writes to ./data through a bind mount, so it runs as whoever owns it. Exported
+# rather than chowned: asking an operator to chown a directory to a uid the image happens to
+# use is a step that gets forgotten once and then debugged for twenty minutes.
+if [ "$(id -u)" -eq 0 ]; then
+    echo "refusing to run as root: the container would inherit uid 0 and the whole" >&2
+    echo "unprivileged-container posture with it. Run as a normal user." >&2
+    exit 2
+fi
+export HOST_UID="$(id -u)"
+export HOST_GID="$(id -g)"
+
 DATA="${HERE}/data"
 LOG_DIR="${DATA}/logs"
 LOG="${LOG_DIR}/run-cycle.log"
