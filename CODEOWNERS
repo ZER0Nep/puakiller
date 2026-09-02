@@ -10,6 +10,11 @@
 # The source of truth for detection and removal.
 /rules/                 @ZER0Nep
 
+# Machine-generated proposals. Inert by design -- nothing compiles them -- but this is where a
+# review that skipped a step would be least visible, so it needs a named reviewer like any
+# other path that can end in a deletion rule.
+/rules/proposed/        @ZER0Nep
+
 # The scripts that ship to end users. Their rule region is generated from /rules/catalog.json;
 # hand-editing it is caught by scripts/verify-generated.py in CI.
 /hosted-removal.ps1     @ZER0Nep

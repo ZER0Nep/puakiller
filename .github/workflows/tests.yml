@@ -72,6 +72,29 @@ jobs:
         # be present is a suite nobody can trust to be offline.
         run: python3 intel-factory/tests/test_hybrid_analysis.py
 
+      - name: Publication boundary tests (bundle, labels, no merge path - offline)
+        shell: bash
+        run: python3 intel-factory/tests/test_publish.py
+
+      - name: Proposals are sourced, guarded and free of benign collisions
+        shell: bash
+        run: python3 scripts/verify-proposals.py
+
+      - name: The publishing job holds no provider or model secret
+        shell: bash
+        run: |
+          # The mandate's hardest separation to verify by reading: the job that can write to
+          # this repository must never see a Hybrid Analysis, Triage or model key. Asserted
+          # against the workflow file itself, so a later edit that adds one fails here.
+          block=$(awk '/^  publish:/{f=1} f' .github/workflows/intel-propose.yml)
+          for name in HYBRID_ANALYSIS TRIAGE LLM_API_KEY ANTHROPIC OPENAI; do
+            if printf '%s' "$block" | grep -q "$name"; then
+              echo "FAIL: the publish job references $name"; exit 1
+            fi
+          done
+          printf '%s' "$block" | grep -q 'contents: write' || { echo "FAIL: publish job lost its permissions block"; exit 1; }
+          echo "OK: the publish job sees only GITHUB_TOKEN"
+
       - name: Intel factory reaches nothing in its default mode
         shell: bash
         run: |

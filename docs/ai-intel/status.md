@@ -1,4 +1,4 @@
-# État du chantier IA — phases 0 à 4
+# État du chantier IA — phases 0 à 5
 
 Dernière mise à jour (UTC) : 2026-09-02
 Base : `ff43b48` (`main`)
@@ -18,7 +18,7 @@ pourquoi — ces dernières seules ne se déduisent pas du code.
 | 2 | Intel Factory hors ligne | terminée | [#2](https://github.com/ZER0Nep/puakiller/pull/2) |
 | 3 | Hybrid Analysis lecture seule | terminée | [#3](https://github.com/ZER0Nep/puakiller/pull/3) |
 | 4 | Rôles LLM scout / critic | terminée | [#4](https://github.com/ZER0Nep/puakiller/pull/4) |
-| 5 | Publication Issue / Draft PR | non commencée | — |
+| 5 | Publication Issue / Draft PR | terminée | [#5](https://github.com/ZER0Nep/puakiller/pull/5) |
 | 6 | Serveur distant (Linux) | non commencée | — |
 | 7 | Triage optionnel | non commencée | — |
 
@@ -29,6 +29,7 @@ feat/rule-catalog-compiler          -> #1
   feat/intel-factory-offline        -> #2
     feat/hybrid-analysis-readonly   -> #3
       feat/llm-scout-critic         -> #4
+        feat/publish-proposals      -> #5
 ```
 
 ## Ce qui bloque
@@ -40,8 +41,8 @@ d'un compte depuis un fork. Un clic de `@ZER0Nep` sur « Approve and run workflo
 Tout a donc été vérifié **localement**, y compris depuis un clone neuf de la branche :
 
 - 7 suites PowerShell × 2 moteurs (Windows PowerShell 5.1 et PowerShell 7.6.5)
-- `scripts/verify-generated.py` — 5 contrôles
-- 127 tests Python, tous hors ligne
+- `scripts/verify-generated.py` — 5 contrôles ; `scripts/verify-proposals.py` — porte propositions
+- 187 tests Python, tous hors ligne
 
 **L'accès API Hybrid Analysis n'est pas encore accordé.** Une demande de vetting est en attente ;
 une relance est prête dans `~/Downloads/hybrid-analysis-vetting-email.txt`. Cela ne bloque pas le
@@ -93,6 +94,22 @@ l'est pas.
 - **La politique sortante a un axe `llm_host`**, distinct du mode : le Job B peut parler à un
   modèle, le Job C non, et les deux surviennent dans un même run `evaluate`.
 
+### Phase 5
+
+- **Une Draft PR n'édite pas `rules/catalog.json`.** Elle ajoute un seul fichier inerte sous
+  `rules/proposed/`. Toucher au catalogue ferait régénérer la région de règles des deux scripts
+  distribués, et une PR ouverte par une machine dont le diff modifie `hosted-removal.ps1` est à
+  un clic de la fusion. **Coût assumé :** le mainteneur relit un JSON, pas le diff final.
+  Détaillé dans `phase5-publication.md`.
+- **Un indicateur `folder` devient un `Alias`, jamais un `Name`.** `Name` déclenche un balayage
+  inconditionnel ; un alias exige une preuve statique dans le dossier. `Name` et `Rx` restent
+  `null` : `promote-proposal.py` refuse tant qu'une personne ne les a pas écrits.
+- **Le client GitHub ne connaît que `GET` et `POST`.** Pas d'endpoint de merge, pas d'API
+  Contents, `draft: True` en littéral. « Aucune fusion automatique » devient un appel
+  impossible plutôt qu'une politique à respecter.
+- **Le jeton n'est stocké nulle part** : lu dans l'environnement au moment de construire
+  l'en-tête. Ça évite un troisième site `.reveal()` et rend l'invariant 5 encore vrai.
+
 ---
 
 ## Invariants qu'aucune phase suivante ne doit défaire
@@ -106,6 +123,12 @@ l'est pas.
 6. Le mode par défaut (`fixture`) ne joint aucun hôte, et la CI ne peut faire aucun appel payant.
 7. La sémantique de détection est figée par le golden
    `docs/ai-intel/baseline-results/rules-golden.txt` (`sha256 dfe4f76c…`).
+8. Le job qui publie ne voit aucun secret fournisseur. Une étape CI lit le bloc `publish:` du
+   workflow et échoue s'il mentionne `HYBRID_ANALYSIS`, `TRIAGE`, `LLM_API_KEY`, `ANTHROPIC`
+   ou `OPENAI`.
+9. `publish.py`, `bundle.py` et `github.py` n'importent ni `config`, ni `transport`, ni
+   `providers`, ni `hybrid_analysis`, ni `llm`, ni `pipeline`. Vérifié sur l'AST.
+10. Le bundle est un schéma fermé. Une clé inconnue est refusée, jamais ignorée.
 
 ---
 
@@ -115,7 +138,8 @@ l'est pas.
 # Tout est-il encore vert ?
 python3 scripts/verify-generated.py
 python3 tests/compiler/test_escape.py
-for t in test_intel_factory test_hybrid_analysis test_llm_roles; do
+python3 scripts/verify-proposals.py
+for t in test_intel_factory test_hybrid_analysis test_llm_roles test_publish; do
     python3 intel-factory/tests/$t.py
 done
 

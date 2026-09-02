@@ -1,0 +1,181 @@
+name: intel-propose
+
+# The split this file exists to enforce (SECURITE-ET-TELEMETRIE.md):
+#
+#   evaluate  holds the Hybrid Analysis and model keys, has NO repository permissions, and
+#             produces one artifact: a bundle.json summary.
+#   publish   holds a repository token, has NO provider or model secret, and can read nothing
+#             but that bundle.
+#
+# Neither job can do the other's work. The evaluate job could not open a pull request if it
+# tried -- `permissions: {}` removes the token's scopes entirely -- and the publish job has no
+# credential that would let it fetch a sandbox report even if the code knew how.
+#
+# Workflow inputs are hostile input, so every one of them reaches the shell through an
+# environment variable rather than through `${{ }}` interpolation inside a `run:` block.
+#
+# It runs on demand only. Scheduling belongs to phase 6, with the anti-overlap lock and the
+# resource limits a scheduled job needs; wiring a cron here first would be the wrong order.
+
+on:
+  workflow_dispatch:
+    inputs:
+      family:
+        description: "Family name to investigate"
+        required: true
+      seeds:
+        description: "Space-separated public seeds (SHA-256 or report ids); defaults to the family"
+        required: false
+        default: ""
+      mode:
+        description: "fixture (offline, free) or collect (reaches Hybrid Analysis, read-only)"
+        required: true
+        default: fixture
+        type: choice
+        options: [fixture, collect]
+      execute:
+        description: "Actually open the Issue or Draft PR. Leave false to see the plan first."
+        required: true
+        default: false
+        type: boolean
+
+# The workflow default is nothing. Each job opts in to exactly what it needs.
+permissions: {}
+
+concurrency:
+  # One publication at a time. Two runs racing on the same family would open two proposals for
+  # it, because the idempotence check cannot see a pull request that does not exist yet.
+  group: intel-propose
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    name: Collect and evaluate (holds the provider keys, can write nothing)
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      route: ${{ steps.route.outputs.route }}
+      candidate: ${{ steps.route.outputs.candidate }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show the outbound policy before anything is sent
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          cd intel-factory
+          PYTHONPATH=src python3 -m puakiller_intel policy --mode "$MODE"
+
+      - name: Run the pipeline
+        env:
+          MODE: ${{ inputs.mode }}
+          FAMILY: ${{ inputs.family }}
+          SEEDS: ${{ inputs.seeds }}
+          # Present here and nowhere else in this file.
+          HYBRID_ANALYSIS_API_KEY: ${{ secrets.HYBRID_ANALYSIS_API_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: |
+          cd intel-factory
+          seed_args=""
+          for seed in $SEEDS; do seed_args="$seed_args --seed $seed"; done
+          if [ -n "$LLM_API_KEY" ]; then llm=env; else llm=fake; fi
+
+          set +e
+          PYTHONPATH=src python3 -m puakiller_intel run \
+            --mode "$MODE" --family "$FAMILY" $seed_args --llm "$llm" --out ../intel-out
+          status=$?
+          set -e
+          # Exit 1 means the candidate was refused. That is a normal, useful outcome and not a
+          # failed run; anything above it is a real error and must fail the workflow.
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+
+      - name: Confirm only the bundle is leaving this job
+        run: |
+          ls -la intel-out || true
+          test -f intel-out/bundle.json || echo "no bundle: the candidate is published nowhere"
+
+      - name: Read the route
+        id: route
+        run: |
+          if [ ! -f intel-out/bundle.json ]; then
+            echo "route=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("intel-out/bundle.json", encoding="utf-8"))
+          print(f"route={data['route']}")
+          print(f"candidate={data['candidate_id']}")
+          PY
+
+      - name: Upload the bundle
+        if: steps.route.outputs.route != 'none'
+        uses: actions/upload-artifact@v4
+        with:
+          name: intel-bundle
+          path: intel-out/bundle.json
+          retention-days: 7
+
+  publish:
+    name: Publish (holds a repository token, holds no provider key)
+    needs: evaluate
+    if: needs.evaluate.outputs.route != 'none'
+    runs-on: ubuntu-latest
+    # The minimum that opening a labelled Issue or Draft PR requires, and nothing more. No
+    # `actions`, no `packages`, no `id-token`, no `checks`.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: intel-bundle
+          path: intel-out
+
+      - name: Plan the publication and write the proposal
+        env:
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          cd intel-factory
+          PYTHONPATH=src python3 -m puakiller_intel publish \
+            --bundle ../intel-out/bundle.json --repo "$REPO" --base "$BASE" --root ..
+
+      - name: Verify the proposal against the benign corpus and the schema
+        run: python3 scripts/verify-proposals.py
+
+      - name: Push the proposal branch
+        if: ${{ inputs.execute && needs.evaluate.outputs.route == 'draft-pr' }}
+        env:
+          BRANCH: intel/proposal/${{ needs.evaluate.outputs.candidate }}
+          FAMILY: ${{ inputs.family }}
+        run: |
+          git config user.name "puakiller-intel"
+          git config user.email "noreply@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add rules/proposed
+          git commit -m "chore(intel): proposal for $FAMILY (needs human review)"
+          git push origin "$BRANCH"
+
+      - name: Open the Issue or Draft PR
+        if: ${{ inputs.execute }}
+        env:
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+          # The only credential in this job.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd intel-factory
+          PYTHONPATH=src python3 -m puakiller_intel publish \
+            --bundle ../intel-out/bundle.json --repo "$REPO" --base "$BASE" --root .. --execute
+
+      - name: Say plainly that nothing was opened
+        if: ${{ !inputs.execute }}
+        run: |
+          echo "Dry run. The plan above was not sent."
+          echo "Re-run with execute=true once the indicators look right."

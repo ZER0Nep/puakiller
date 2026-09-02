@@ -2,6 +2,7 @@
 
     python -m puakiller_intel run --family OneStart --seed onestart
     python -m puakiller_intel run --mode collect --dry-run --family X --seed <sha256>
+    python -m puakiller_intel publish --bundle out/bundle.json --repo ZER0Nep/puakiller
     python -m puakiller_intel policy --mode collect
     python -m puakiller_intel cache --purge-older-than 30
     python -m puakiller_intel fixtures
@@ -14,8 +15,13 @@ returning an empty result set -- an empty collector is indistinguishable from a 
 found nothing. ``--dry-run`` prints the exact destination list without sending anything, which
 is the review step before granting the container network access.
 
+``publish`` is the other half, and it is deliberately a separate command run by a separate
+job: it takes a bundle file and a GitHub token, and it has no provider key, no model key and
+no access to any raw document. It defaults to a dry run, because a command that publishes by
+default publishes by accident.
+
 Exit codes:
-    0  a candidate was produced and routed
+    0  a candidate was produced and routed, or a publication was planned or carried out
     1  the candidate was refused -- a normal, useful outcome, not an error
     2  the run could not proceed: bad input, non-public data, misconfiguration
 """
@@ -26,12 +32,15 @@ import argparse
 import sys
 from pathlib import Path
 
+from .bundle import BundleError, build_bundle, load_bundle, write_bundle
 from .config import Config, ConfigError
 from .critic import BenignCatalog
 from .hybrid_analysis import HybridAnalysisError, HybridAnalysisProvider, plan_requests
 from .llm import DisabledLLM, FakeDeterministicLLM, LLMError, build_client
+from .github import GitHubClient, GitHubError, Repo
 from .pipeline import render_report, run_pipeline, write_outputs
 from .providers import FixtureProvider, ProviderError
+from .publish import PublishError, execute, plan_publication, write_proposal
 from .scout import ScoutError
 from .security import ForbiddenDataError, OutboundPolicy, redact_secrets
 from .transport import DryRunBlocked, ReadOnlyHttpClient, TransportError
@@ -66,6 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", type=Path, default=None, help="write candidate.json, decision.json and report.md here"
     )
     run.add_argument(
+        "--bundle",
+        type=Path,
+        default=None,
+        help="also write the publication bundle here -- the only artifact the publisher may read",
+    )
+    run.add_argument(
         "--llm",
         default="fake",
         choices=["fake", "disabled", "env"],
@@ -76,6 +91,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="plan every request and print the destinations, then send nothing",
+    )
+
+    publish = sub.add_parser(
+        "publish", help="open an Issue or a Draft PR from a bundle; needs no provider or model key"
+    )
+    publish.add_argument("--bundle", type=Path, required=True, help="the bundle written by 'run'")
+    publish.add_argument("--repo", required=True, metavar="OWNER/REPO")
+    publish.add_argument("--base", default="main", help="base branch for a draft pull request")
+    publish.add_argument(
+        "--root", type=Path, default=REPO_ROOT, help="repository checkout to write the proposal into"
+    )
+    publish.add_argument(
+        "--execute",
+        action="store_true",
+        help="actually create the Issue or Draft PR; without it nothing is sent",
     )
 
     cache = sub.add_parser("cache", help="inspect or prune the response cache")
@@ -231,12 +261,92 @@ def cmd_run(args) -> int:
     else:
         print(report)
 
+    bundle_path = args.bundle or (Path(args.out) / "bundle.json" if args.out else None)
+    if bundle_path is not None:
+        # A refused candidate has no bundle, and that is not an error: the publisher having
+        # nothing to read is exactly how "published nowhere" is implemented.
+        if result.decision.route not in ("issue", "draft-pr"):
+            print(f"no bundle written: route {result.decision.route!r} is published nowhere")
+        else:
+            try:
+                bundle = build_bundle(result, policy.describe())
+                print(f"wrote {write_bundle(bundle, bundle_path)}")
+            except (BundleError, ForbiddenDataError) as exc:
+                print(f"REFUSED to build a publication bundle: {exc}", file=sys.stderr)
+                return 2
+
     return 0 if result.decision.accepted else 1
+
+
+def cmd_publish(args) -> int:
+    """Open an Issue or a Draft PR from a bundle. No provider key, no model, no raw document.
+
+    This is the whole of Job D. Its inputs are a JSON summary and a GitHub token; it cannot
+    read a sandbox report even if one were on disk, because nothing here knows how to.
+    """
+    try:
+        repo = Repo.parse(args.repo)
+        bundle = load_bundle(args.bundle)
+    except (BundleError, GitHubError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except ForbiddenDataError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        print("Nothing was published. The bundle carries data that must never leave.", file=sys.stderr)
+        return 2
+
+    policy = OutboundPolicy(mode="propose")
+    print(f"repo    : {repo.full_name}")
+    print(f"bundle  : {args.bundle}")
+    print(f"route   : {bundle['route']} (score {bundle['score']}/100)")
+    print(f"policy  : {policy.describe()}")
+
+    client = GitHubClient(repo, dry_run=not args.execute)
+
+    try:
+        # Only asked for when something will actually be sent: a dry run must not need a token.
+        titles, heads = (), ()
+        if args.execute:
+            titles = client.open_issue_titles("ai-intel")
+            heads = client.open_pull_head_refs()
+
+        plan = plan_publication(
+            bundle, base=args.base, existing_issue_titles=titles, existing_head_refs=heads
+        )
+        print(plan.describe())
+
+        if plan.kind == "draft-pr":
+            path = write_proposal(bundle, args.root)
+            print(f"wrote {path}")
+
+        if not args.execute:
+            print("DRY RUN -- nothing was sent. Re-run with --execute to open it.")
+            return 0
+
+        outcome = execute(plan, client)
+        number = (outcome.get("response") or {}).get("number")
+        html = (outcome.get("response") or {}).get("html_url", "")
+        print(f"{outcome['kind']}: {html or number or outcome.get('reason', 'done')}")
+        if outcome.get("labels_error"):
+            print(f"warning: labels were not applied: {outcome['labels_error']}", file=sys.stderr)
+    except ForbiddenDataError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return 2
+    except (BundleError, PublishError, GitHubError) as exc:
+        print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
+        return 2
+    return 0
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
-    handlers = {"run": cmd_run, "policy": cmd_policy, "fixtures": cmd_fixtures, "cache": cmd_cache}
+    handlers = {
+        "run": cmd_run,
+        "publish": cmd_publish,
+        "policy": cmd_policy,
+        "fixtures": cmd_fixtures,
+        "cache": cmd_cache,
+    }
     return handlers[args.command](args)
 
 

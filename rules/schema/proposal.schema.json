@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://puakiller.example/schemas/rules/proposal.schema.json",
+  "title": "PUAKILLER Intel Proposal",
+  "description": "An inert, machine-generated proposal placed under rules/proposed/ by a Draft PR. Nothing compiles it and no test derives a rule from it: it becomes a rule only when a maintainer runs scripts/promote-proposal.py, which refuses until Name and Rx have been written by hand. Name and Rx are nullable here precisely because the factory must never produce an unconditional folder sweep or a pattern.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_version",
+    "family",
+    "candidate_id",
+    "score",
+    "generated_at",
+    "requires_human_review",
+    "draft_rule",
+    "indicator_sources",
+    "provenance",
+    "run_provenance",
+    "benign_collisions",
+    "critic_findings",
+    "human_todo"
+  ],
+  "properties": {
+    "proposal_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "family": { "type": "string", "minLength": 2, "maxLength": 128 },
+    "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "generated_at": { "type": "string", "minLength": 8, "maxLength": 32 },
+
+    "requires_human_review": {
+      "description": "Always true. A proposal claiming otherwise is refused by the verifier as well as by this schema.",
+      "const": true
+    },
+
+    "draft_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "Name", "Label", "Rx", "Proc", "Pub", "Nw", "Harden", "Aliases", "RegNames", "Hashes", "requires_manual_regex"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+        "Name": {
+          "description": "Null in every generated proposal. Name drives an UNCONDITIONAL folder sweep, so the factory never fills it; a maintainer who sets it is accepting that sweep deliberately. The minimum length matches the catalog schema, because a short Name deletes legitimate software.",
+          "type": ["string", "null"],
+          "minLength": 5,
+          "maxLength": 128
+        },
+        "Label": { "type": "string", "maxLength": 128 },
+        "Rx": {
+          "description": "Null in every generated proposal. Patterns are written by people (PROMPT-PRINCIPAL: the AI never produces a free regex).",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "Proc": { "$ref": "#/$defs/stringArray" },
+        "Pub": { "type": "string", "maxLength": 512 },
+        "Nw": { "type": "boolean" },
+        "Harden": { "$ref": "#/$defs/stringArray" },
+        "Aliases": { "$ref": "#/$defs/stringArray" },
+        "RegNames": { "$ref": "#/$defs/stringArray" },
+        "Hashes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        },
+        "requires_manual_regex": { "const": true }
+      }
+    },
+
+    "indicator_sources": {
+      "description": "Every proposed value mapped to the public evidence ids that support it. A value absent from here is unsourced, and the verifier refuses the proposal rather than dropping the value.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string", "minLength": 3, "maxLength": 128 }
+      }
+    },
+
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 8, "maxLength": 2048 }
+    },
+
+    "run_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generated_at", "prompt_versions", "config_hash", "tool_version"],
+      "properties": {
+        "generated_at": { "type": "string", "minLength": 8, "maxLength": 32 },
+        "prompt_versions": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "maxLength": 128 }
+        },
+        "config_hash": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "tool_version": { "type": "string", "minLength": 1, "maxLength": 32 }
+      }
+    },
+
+    "benign_collisions": { "$ref": "#/$defs/lines" },
+    "critic_findings": { "$ref": "#/$defs/lines" },
+    "human_todo": { "$ref": "#/$defs/lines" }
+  },
+
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
+    "lines": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 2048 }
+    }
+  }
+}
