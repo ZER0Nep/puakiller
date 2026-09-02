@@ -25,3 +25,8 @@ Dockerfile text eol=lf
 .gitattributes text eol=lf
 .gitignore     text eol=lf
 CODEOWNERS     text eol=lf
+
+# The deployment env template is read by docker compose on Linux. A CRLF here puts a
+# trailing carriage return inside every value, which turns a valid key into an invalid one.
+.env.example text eol=lf
+*.env text eol=lf
