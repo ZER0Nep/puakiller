@@ -4,6 +4,7 @@
 #   deploy/run-cycle.sh                 # fixture: reaches nothing, needs no key
 #   deploy/run-cycle.sh OneStart        # fixture, that family
 #   MODE=collect deploy/run-cycle.sh OneStart <sha256>...
+#   MODE=collect TRIAGE=true deploy/run-cycle.sh OneStart
 #
 # The anti-overlap lock lives inside the container (puakiller-intel run --lock), because that
 # is where it can be tested. This script adds the things a lock cannot do: it keeps the host
@@ -20,6 +21,10 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE=(docker compose -f "${HERE}/compose.yaml")
 
 MODE="${MODE:-fixture}"
+# Triage stays an environment switch rather than a positional flag, so it reads the same way as
+# MODE and cannot be mistaken for a family name. The CLI still refuses unless TRIAGE_ENABLED is
+# also set in .env: one switch alone does not turn an optional provider on.
+TRIAGE="${TRIAGE:-false}"
 FAMILY="${1:-OneStart}"
 shift || true
 SEEDS=("$@")
@@ -54,7 +59,7 @@ log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$LOG"; 
 
 rotate_log
 
-log "cycle start mode=${MODE} family=${FAMILY} seeds=${#SEEDS[@]}"
+log "cycle start mode=${MODE} family=${FAMILY} seeds=${#SEEDS[@]} triage=${TRIAGE}"
 
 # --- catalog backup ----------------------------------------------------------
 # Before, not after. The catalog is the thing a bad day could damage, and a backup taken after
@@ -77,12 +82,16 @@ else
     profile=(--profile online)
 fi
 
+triage_args=()
+[ "$TRIAGE" = "true" ] && triage_args+=("--triage")
+
 set +e
 "${COMPOSE[@]}" "${profile[@]}" run --rm "$service" \
     run \
     "--mode=${MODE}" \
     "--family=${FAMILY}" \
     "${seed_args[@]}" \
+    "${triage_args[@]}" \
     --benign=/repo/rules/benign.json \
     --out=/data/out \
     --lock=/data/state/run.lock \

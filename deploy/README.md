@@ -8,6 +8,9 @@ The host does two things: it collects public evidence and it evaluates it. It do
 publish. Publication happens in GitHub Actions, or from an operator's own checkout, so the
 machine holding the provider keys never holds a write credential for the repository.
 
+Step-by-step instructions for a fresh server, in French, are in `DEPLOIEMENT.md`. This file
+covers what each control is for; that one covers what to type.
+
 ---
 
 ## Staged bring-up
