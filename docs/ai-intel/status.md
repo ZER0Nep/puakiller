@@ -1,4 +1,4 @@
-# État du chantier IA — phases 0 à 6
+# État du chantier IA — phases 0 à 7 (toutes terminées)
 
 Dernière mise à jour (UTC) : 2026-09-02
 Base : `ff43b48` (`main`)
@@ -20,7 +20,7 @@ pourquoi — ces dernières seules ne se déduisent pas du code.
 | 4 | Rôles LLM scout / critic | terminée | [#4](https://github.com/ZER0Nep/puakiller/pull/4) |
 | 5 | Publication Issue / Draft PR | terminée | [#5](https://github.com/ZER0Nep/puakiller/pull/5) |
 | 6 | Serveur distant (Linux) | terminée | [#6](https://github.com/ZER0Nep/puakiller/pull/6) |
-| 7 | Triage optionnel | non commencée | — |
+| 7 | Triage optionnel | terminée | [#7](https://github.com/ZER0Nep/puakiller/pull/7) |
 
 Les quatre branches sont **empilées** et doivent être relues dans l'ordre :
 
@@ -31,6 +31,7 @@ feat/rule-catalog-compiler          -> #1
       feat/llm-scout-critic         -> #4
         feat/publish-proposals      -> #5
           feat/deploy-scheduled-factory -> #6
+            feat/optional-triage      -> #7
 ```
 
 ## Ce qui bloque
@@ -43,7 +44,7 @@ Tout a donc été vérifié **localement**, y compris depuis un clone neuf de la
 
 - 7 suites PowerShell × 2 moteurs (Windows PowerShell 5.1 et PowerShell 7.6.5)
 - `scripts/verify-generated.py` — 5 contrôles ; `scripts/verify-proposals.py` — porte propositions
-- 218 tests Python, tous hors ligne
+- 250 tests Python, tous hors ligne
 
 **L'accès API Hybrid Analysis n'est pas encore accordé.** Une demande de vetting est en attente ;
 une relance est prête dans `~/Downloads/hybrid-analysis-vetting-email.txt`. Cela ne bloque pas le
@@ -95,6 +96,25 @@ l'est pas.
 - **La politique sortante a un axe `llm_host`**, distinct du mode : le Job B peut parler à un
   modèle, le Job C non, et les deux surviennent dans un même run `evaluate`.
 
+### Phase 7
+
+- **Triage corrobore, il n'origine pas.** L'allowlist de champs fait deux entrées : SHA-256 et
+  nom de fichier soumis. Signatures, configurations extraites, fichiers déposés et lignes de
+  commande ne sont pas lus. La valeur d'une seconde source est de renforcer la corroboration
+  d'indicateurs qui existent déjà (+25 au score) ; laisser un fournisseur optionnel introduire
+  un type d'indicateur inédit mettrait le maillon le plus faible au plus près de la règle.
+- **Deux interrupteurs, et il faut les deux.** `--triage` **et** `TRIAGE_ENABLED`. L'un sans
+  l'autre est un refus explicite : un fournisseur optionnel qui s'active tout seul n'est pas
+  optionnel. Construire un `TriageProvider` désactivé lève une erreur.
+- **La recherche de Triage est un `GET`.** C'est ce qui rend le semis par nom de famille
+  possible ici alors que la phase 3 y a renoncé côté Hybrid Analysis (`POST /search/terms`).
+  C'est le meilleur argument pour activer Triage, et la raison d'être de l'option.
+- **Un troisième site `.reveal()`.** L'invariant 5 passe d'un *compte* à une *liste nommée* :
+  `hybrid_analysis.py`, `llm.py`, `triage.py`. La propriété qui compte est quels modules posent
+  une clé sur le fil, pas combien.
+- **La panne d'une source optionnelle ne fait pas échouer le run** ; la panne de la source
+  requise, si. Elle est signalée sur stderr, jamais avalée.
+
 ### Phase 6
 
 - **Le serveur ne publie pas.** Il collecte et évalue ; l'Issue ou la Draft PR vient de GitHub
@@ -137,8 +157,8 @@ l'est pas.
 2. Aucun échantillon ne peut être soumis. `transport.py` reste sans corps de requête.
 3. Aucune donnée SOC n'entre. Le filtre échoue fermé et nomme la classe, jamais la valeur.
 4. Aucun modèle ne peut bloquer ni approuver.
-5. `.reveal()` n'existe qu'à deux endroits — clé bac à sable, clé modèle. Un test échoue au
-   troisième.
+5. `.reveal()` n'existe qu'aux trois sites nommés dans `REVEAL_SITES` — `hybrid_analysis.py`,
+   `llm.py`, `triage.py`. Un quatrième fait échouer un test.
 6. Le mode par défaut (`fixture`) ne joint aucun hôte, et la CI ne peut faire aucun appel payant.
 7. La sémantique de détection est figée par le golden
    `docs/ai-intel/baseline-results/rules-golden.txt` (`sha256 dfe4f76c…`).
@@ -154,6 +174,10 @@ l'est pas.
     `.env.example`.
 13. `last-run.json` et `run.lock` ont un jeu de clés fermé et ne portent ni hostname, ni
     username, ni preuve.
+14. Triage reste optionnel. Aucun mode ne joint `tria.ge` sans `--triage` **et**
+    `TRIAGE_ENABLED`, et seul le mode `collect` peut l'atteindre même activé.
+15. L'allowlist Triage fait deux types (`sha256`, `filename`). L'élargir est un changement de
+    conception, pas un ajustement.
 
 ---
 
@@ -164,7 +188,7 @@ l'est pas.
 python3 scripts/verify-generated.py
 python3 tests/compiler/test_escape.py
 python3 scripts/verify-proposals.py
-for t in test_intel_factory test_hybrid_analysis test_llm_roles test_publish test_deploy; do
+for t in test_intel_factory test_hybrid_analysis test_llm_roles test_publish test_deploy test_triage; do
     python3 intel-factory/tests/$t.py
 done
 
@@ -182,3 +206,8 @@ foreach ($t in 'Test-PuaRules','Test-RuleCatalog','Test-StatsUpdater','Test-OneB
 ```
 
 **Aucune règle de détection ni logique de suppression n'a été modifiée depuis `ff43b48`.**
+
+Les sept phases sont terminées. Ce qui reste est hors du code : l'approbation CI par
+`@ZER0Nep` sur les PR issues du fork, la réponse au vetting Hybrid Analysis, et — si Triage est
+un jour activé — un premier `collect --dry-run` réel pour revérifier l'allowlist de champs
+contre une réponse authentique, les cassettes étant écrites à la main faute d'accès.

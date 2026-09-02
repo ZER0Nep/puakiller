@@ -136,10 +136,13 @@ class TestSecretHandling(unittest.TestCase):
     def test_dataclass_repr_does_not_leak(self):
         self.assertNotIn(FAKE_KEY, repr(offline_config()))
 
+    # Three credentials reaching three different services, so three separate, individually
+    # reviewable reveal points. This list is named rather than counted: the property that
+    # matters is WHICH modules put a key on the wire, not how many. Adding a name here should
+    # be a deliberate act in a diff a reviewer sees -- as it was for triage.py in phase 7.
+    REVEAL_SITES = ["hybrid_analysis.py", "llm.py", "triage.py"]
+
     def test_keys_are_revealed_only_where_they_must_be(self):
-        # Two credentials, two call sites, and no others. hybrid_analysis.py holds the sandbox
-        # key; llm.py holds the model key. They are separate secrets reaching separate services,
-        # so they get separate, individually reviewable reveal points.
         package = INTEL_ROOT / "src" / "puakiller_intel"
         callers = sorted(
             path.name
@@ -148,7 +151,7 @@ class TestSecretHandling(unittest.TestCase):
         )
         self.assertEqual(
             callers,
-            ["hybrid_analysis.py", "llm.py"],
+            self.REVEAL_SITES,
             "a new .reveal() call site appeared; every one of them is a chance to leak a key",
         )
 

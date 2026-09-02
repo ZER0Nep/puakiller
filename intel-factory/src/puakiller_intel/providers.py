@@ -115,6 +115,36 @@ class FixtureProvider:
             raise ProviderError(f"{path.name}: {exc}") from exc
 
 
+class CompositeProvider:
+    """A required provider, plus optional ones that may only add to what it found.
+
+    Used when Triage is enabled alongside Hybrid Analysis. The asymmetry is the point:
+
+      * the required provider's failure propagates, because a collector that quietly returns
+        nothing is indistinguishable from one that found nothing, and that difference decides
+        whether a rule gets written;
+      * an optional provider's failure is logged and stepped over, because "the pipeline works
+        entirely without Triage" has to remain true on the day Triage is down.
+    """
+
+    def __init__(self, required, optional=()) -> None:
+        self.required = required
+        self.optional = list(optional)
+        self.name = "+".join([required.name] + [p.name for p in self.optional])
+        self.skipped: list = []
+
+    def collect_public(self, seed: str) -> list:
+        evidence = list(self.required.collect_public(seed))
+        for provider in self.optional:
+            try:
+                evidence.extend(provider.collect_public(seed))
+            except Exception as exc:  # noqa: BLE001 - each adapter raises its own error type
+                # Recorded rather than swallowed: the run report says which optional source was
+                # unavailable, so a quiet week is not mistaken for a clean one.
+                self.skipped.append(f"{provider.name}: {redact_secrets(str(exc))}")
+        return evidence
+
+
 def collect_all(provider: Provider, seeds: Iterable) -> list:
     """Collect for several seeds, preserving order and dropping exact duplicates by id."""
     seen: set = set()

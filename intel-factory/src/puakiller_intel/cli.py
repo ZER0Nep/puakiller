@@ -39,9 +39,11 @@ from .hybrid_analysis import HybridAnalysisError, HybridAnalysisProvider, plan_r
 from .llm import DisabledLLM, FakeDeterministicLLM, LLMError, build_client
 from .github import GitHubClient, GitHubError, Repo
 from .pipeline import TOOL_VERSION, render_report, run_pipeline, write_outputs
-from .providers import FixtureProvider, ProviderError
+from .providers import CompositeProvider, FixtureProvider, ProviderError
 from .publish import PublishError, execute, plan_publication, write_proposal
 from .runlock import LockBusy, RunLock, health, record_run
+from .triage import TriageError, TriageProvider
+from .triage import plan_requests as plan_triage_requests
 from .scout import ScoutError
 from .security import ForbiddenDataError, OutboundPolicy, redact_secrets
 from .transport import DryRunBlocked, ReadOnlyHttpClient, TransportError
@@ -191,7 +193,18 @@ def _build_provider(args, policy):
     if args.mode == "collect":
         config = Config.from_env(mode="collect", dry_run=args.dry_run)
         client = ReadOnlyHttpClient(config, policy)
-        return HybridAnalysisProvider(client, config), config
+        provider = HybridAnalysisProvider(client, config)
+
+        # Triage needs BOTH the flag and the environment switch. Either one alone leaves it
+        # off, because an optional provider that turns itself on is not optional.
+        if args.triage and config.triage_enabled:
+            provider = CompositeProvider(provider, [TriageProvider(client, config)])
+        elif args.triage and not config.triage_enabled:
+            raise ProviderError(
+                "--triage was passed but TRIAGE_ENABLED is not set. Triage is off by default "
+                "and the pipeline is specified to work entirely without it; set both, or neither."
+            )
+        return provider, config
 
     raise ProviderError(
         f"mode {args.mode!r} has no provider yet. Use --mode fixture or --mode collect, or run "
@@ -228,7 +241,12 @@ def _run_once(args) -> tuple:
             print(f"DRY RUN -- nothing will be sent. {policy.describe()}")
             if config is not None:
                 print(config.describe())
-            planned = plan_requests(provider, seeds) if config is not None else []
+            planned = []
+            if config is not None:
+                base = getattr(provider, "required", provider)
+                planned = plan_requests(base, seeds)
+                for optional in getattr(provider, "optional", []):
+                    planned.extend(plan_triage_requests(optional, seeds))
             if not planned:
                 print("  no outbound request would be made")
             for line in planned:
@@ -273,9 +291,14 @@ def _run_once(args) -> tuple:
     except LLMError as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
         return 2, "error"
-    except (ProviderError, ScoutError, HybridAnalysisError, TransportError) as exc:
+    except (ProviderError, ScoutError, HybridAnalysisError, TriageError, TransportError) as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
         return 2, "error"
+
+    # An optional source that was unavailable is reported, never swallowed: a run with less
+    # corroboration than usual should look different from a quiet week.
+    for skipped in getattr(provider, "skipped", []):
+        print(f"warning: an optional source was unavailable -- {skipped}", file=sys.stderr)
 
     report = render_report(result, policy.describe())
     if args.out:

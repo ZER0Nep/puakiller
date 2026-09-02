@@ -101,6 +101,12 @@ jobs:
           printf '%s' "$block" | grep -q 'contents: write' || { echo "FAIL: publish job lost its permissions block"; exit 1; }
           echo "OK: the publish job sees only GITHUB_TOKEN"
 
+      - name: Triage tests (optional provider, off by default, recorded cassettes)
+        shell: bash
+        # Triage is optional by mandate, so most of these assert its ABSENCE: no mode reaches
+        # tria.ge unless both switches are on, and the pipeline behaves identically without it.
+        run: python3 intel-factory/tests/test_triage.py
+
       - name: Deployment tests (lock, health, container shape - no docker needed)
         shell: bash
         run: python3 intel-factory/tests/test_deploy.py
