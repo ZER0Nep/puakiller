@@ -21,6 +21,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .llm import INJECTION_PREAMBLE, LLMError, PromptLibrary
 from .models import Candidate, CriticFinding, Critique
 
 # Below this length a name is not distinctive enough to delete a folder by. 'OB' and 'Shift'
@@ -79,13 +80,40 @@ class BenignCatalog:
         return None
 
 
-class Critic:
-    """Deterministic adversarial review of a candidate."""
+# Codes the deterministic checker already owns. An advisory finding that only repeats one of
+# these is noise: the reviewer has already seen it, with a rule behind it.
+_ALREADY_COVERED = frozenset({"short-name-wide-effect", "single-source-wide-effect", "signer-only"})
 
-    def __init__(self, benign: BenignCatalog) -> None:
+MAX_ADVISORY_FINDINGS = 20
+
+
+class Critic:
+    """Adversarial review of a candidate.
+
+    Two layers, and the asymmetry between them is the whole design.
+
+    The deterministic layer owns every **blocking** objection. Each of its rules can be read,
+    tested and argued with, which matters because these are the objections that stop a removal.
+
+    The model layer is **advisory only**. It catches what a rule cannot: that a word is common in
+    another language, that a name belongs to a product no benign list has heard of, that two
+    vendors have confusingly similar names. Its findings reach the human reviewer and stop
+    nothing by themselves. An objection nobody can inspect would be as unaccountable as an
+    indicator nobody can source, and this is not the place to accept that trade.
+    """
+
+    def __init__(self, benign: BenignCatalog, llm_client=None, prompts=None) -> None:
         self.benign = benign
+        self.llm_client = llm_client
+        self.prompts = prompts or PromptLibrary()
 
     def review(self, candidate: Candidate) -> Critique:
+        critique = self._review_deterministic(candidate)
+        if candidate.indicators and self.llm_client is not None:
+            self._add_advisory(candidate, critique)
+        return critique
+
+    def _review_deterministic(self, candidate: Candidate) -> Critique:
         critique = Critique()
 
         if not candidate.indicators:
@@ -106,6 +134,54 @@ class Critic:
 
         self._check_signer_alone(candidate, critique)
         return critique
+
+    def _add_advisory(self, candidate: Candidate, critique: Critique) -> None:
+        """Ask a model to argue against the candidate. Nothing it says can block."""
+        request = {
+            "family": candidate.family,
+            "indicators": [
+                {"kind": i.kind, "value": i.value, "confidence": i.confidence}
+                for i in candidate.indicators
+            ],
+        }
+        try:
+            prompt = self.prompts.load("critic")
+            response = self.llm_client.complete_json(
+                role="critic",
+                system=f"{INJECTION_PREAMBLE}\n\n{prompt.text}",
+                user=json.dumps(request, sort_keys=True),
+            )
+        except LLMError as exc:
+            # A model that is down, rate-limited or misconfigured must not stop the review: the
+            # deterministic layer has already done the part that can block.
+            critique.findings.append(
+                CriticFinding(
+                    code="advisory-unavailable", message=f"model critic did not run: {exc}"
+                )
+            )
+            return
+
+        known = {i.value for i in candidate.indicators}
+        for raw in (response.payload.get("findings") or [])[:MAX_ADVISORY_FINDINGS]:
+            if not isinstance(raw, dict):
+                continue
+            code = str(raw.get("code") or "advisory").strip()[:64]
+            message = str(raw.get("message") or "").strip()[:1024]
+            if not message or code in _ALREADY_COVERED:
+                continue
+            target = raw.get("indicator_value")
+            # A finding about something the candidate does not contain is a finding about
+            # nothing. Dropped rather than shown, for the same reason a fabricated indicator is.
+            if target is not None and target not in known:
+                continue
+            critique.findings.append(
+                CriticFinding(
+                    code=f"advisory:{code}",
+                    message=message,
+                    indicator_value=target,
+                    blocking=False,  # never negotiable
+                )
+            )
 
     def _check_benign_collision(self, indicator, critique: Critique) -> None:
         hit = self.benign.collides(indicator.kind, indicator.value)

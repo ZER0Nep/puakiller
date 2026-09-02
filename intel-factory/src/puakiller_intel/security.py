@@ -191,6 +191,11 @@ class OutboundPolicy:
 
     mode: str
     triage_enabled: bool = False
+    # The model API is its own axis, not a property of a mode. Job B (analysis) may talk to a
+    # model; Job C (validation) may not, and both can happen in an 'evaluate' run. Making this
+    # explicit means "the validator works with no network" stays true by construction rather
+    # than by the mode happening to be set right.
+    llm_host: str = ""
 
     @property
     def allowed_hosts(self) -> frozenset:
@@ -199,6 +204,8 @@ class OutboundPolicy:
         hosts = ALLOWED_HOSTS_BY_MODE[self.mode]
         if self.triage_enabled and self.mode == "collect":
             hosts = hosts | {TRIAGE_HOST}
+        if self.llm_host:
+            hosts = hosts | {self.llm_host}
         return frozenset(hosts)
 
     def check(self, url: str) -> None:
@@ -215,3 +222,7 @@ class OutboundPolicy:
     def describe(self) -> str:
         hosts = sorted(self.allowed_hosts)
         return f"mode={self.mode} outbound={'none' if not hosts else ', '.join(hosts)}"
+
+    @property
+    def reaches_nothing(self) -> bool:
+        return not self.allowed_hosts

@@ -384,8 +384,29 @@ class TestReproducibility(unittest.TestCase):
     def test_provenance_records_prompt_versions_and_config_hash(self):
         candidate = self._run().candidate
         self.assertIsNotNone(candidate.run_provenance)
-        self.assertEqual(candidate.run_provenance.prompt_versions["scout"], "scout-v1")
         self.assertTrue(candidate.run_provenance.config_hash)
+
+        # The stamp is the declared version plus a hash of the prompt file's contents. The hash
+        # is the load-bearing half: a prompt edited without a version bump would otherwise
+        # change every later candidate with nothing in the output to show it.
+        for role in ("scout", "critic"):
+            stamp = candidate.run_provenance.prompt_versions[role]
+            with self.subTest(role=role):
+                self.assertTrue(stamp.startswith(f"{role}-v1+"), stamp)
+                self.assertNotIn("+missing", stamp, "the prompt file was not found on disk")
+                self.assertGreaterEqual(len(stamp.split("+", 1)[1]), 8)
+
+    def test_editing_a_prompt_changes_the_stamp(self):
+        from puakiller_intel.llm import PromptLibrary
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "scout-system.md"
+            path.write_text("---\nrole: scout\nversion: scout-v1\n---\nfirst", encoding="utf-8")
+            first = PromptLibrary(tmp).load("scout").stamp
+            path.write_text("---\nrole: scout\nversion: scout-v1\n---\nsecond", encoding="utf-8")
+            second = PromptLibrary(tmp).load("scout").stamp
+
+        self.assertNotEqual(first, second, "an edited prompt must not keep the same stamp")
 
     def test_normalization_is_order_independent(self):
         a = evidence("fixture:a", ("folder", "Vendor"), ("process", "proc"))

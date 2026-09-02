@@ -59,6 +59,12 @@ jobs:
         shell: bash
         run: python3 intel-factory/tests/test_intel_factory.py
 
+      - name: LLM role tests (prompts, strict JSON, advisory critic - no paid call)
+        shell: bash
+        # Every client here is driven through an injected opener and the default is the
+        # deterministic fake, so this step cannot reach a model API or cost anything.
+        run: python3 intel-factory/tests/test_llm_roles.py
+
       - name: Hybrid Analysis contract tests (recorded cassettes, no key, no network)
         shell: bash
         # Live tests are skipped unless PUAKILLER_INTEL_LIVE_TESTS=1 and a key are both set.

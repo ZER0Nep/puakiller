@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import re
 
-from .llm import INJECTION_PREAMBLE, PROMPT_VERSIONS
+from .llm import INJECTION_PREAMBLE, PROMPT_VERSIONS, LLMError, PromptLibrary
 from .models import Candidate, Indicator, ModelError
 from .normalize import NormalizedEvidence
 from .security import assert_public
@@ -61,12 +61,26 @@ def _slugify(name: str) -> str:
 class Scout:
     """Extracts a candidate from normalized evidence, using a model as an assistant."""
 
-    def __init__(self, client) -> None:
+    def __init__(self, client, prompts=None) -> None:
         self.client = client
+        self.prompts = prompts or PromptLibrary()
 
     @property
     def prompt_version(self) -> str:
-        return PROMPT_VERSIONS["scout"]
+        try:
+            return self.prompts.load("scout").stamp
+        except LLMError:
+            return PROMPT_VERSIONS["scout"]
+
+    def _system_prompt(self) -> str:
+        """The versioned prompt from disk, with the constant preamble in front of it."""
+        try:
+            body = self.prompts.load("scout").text
+        except LLMError:
+            # The fallback keeps a missing prompt file from taking the pipeline down; the
+            # provenance stamp records the miss either way.
+            body = SCOUT_SYSTEM
+        return f"{INJECTION_PREAMBLE}\n\n{body}"
 
     def extract(self, normalized: NormalizedEvidence, family: str) -> Candidate:
         if not normalized.facts:
@@ -79,7 +93,7 @@ class Scout:
         request = {"family": family, "facts": [f.to_dict() for f in normalized.facts]}
         response = self.client.complete_json(
             role="scout",
-            system=f"{INJECTION_PREAMBLE}\n\n{SCOUT_SYSTEM}",
+            system=self._system_prompt(),
             user=json.dumps(request, sort_keys=True),
         )
         return self._parse(response.payload, normalized, family)

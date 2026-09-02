@@ -29,7 +29,7 @@ from pathlib import Path
 from .config import Config, ConfigError
 from .critic import BenignCatalog
 from .hybrid_analysis import HybridAnalysisError, HybridAnalysisProvider, plan_requests
-from .llm import DisabledLLM, FakeDeterministicLLM
+from .llm import DisabledLLM, FakeDeterministicLLM, LLMError, build_client
 from .pipeline import render_report, run_pipeline, write_outputs
 from .providers import FixtureProvider, ProviderError
 from .scout import ScoutError
@@ -65,7 +65,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--out", type=Path, default=None, help="write candidate.json, decision.json and report.md here"
     )
-    run.add_argument("--llm", default="fake", choices=["fake", "disabled"], help="default: deterministic fake")
+    run.add_argument(
+        "--llm",
+        default="fake",
+        choices=["fake", "disabled", "env"],
+        help="fake (default, free and reproducible) | disabled | env (read LLM_* from the environment)",
+    )
     run.add_argument("--triage", action="store_true", help="enable the optional Triage adapter (off by default)")
     run.add_argument(
         "--dry-run",
@@ -85,7 +90,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _client(name: str):
-    return FakeDeterministicLLM() if name == "fake" else DisabledLLM()
+    """Pick the model client. The fake is the default everywhere, always.
+
+    'env' is the only path to a paid call, and it still refuses to start without a key rather
+    than silently falling back -- a run that quietly skipped the model would still emit a
+    candidate, and nobody would know the analysis never happened.
+    """
+    if name == "fake":
+        return FakeDeterministicLLM()
+    if name == "disabled":
+        return DisabledLLM()
+    return build_client(Config.from_env(mode="fixture"))
 
 
 def cmd_policy(args) -> int:
@@ -202,6 +217,9 @@ def cmd_run(args) -> int:
     except DryRunBlocked as exc:
         print(f"dry run stopped before sending: {exc}", file=sys.stderr)
         return 0
+    except LLMError as exc:
+        print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
+        return 2
     except (ProviderError, ScoutError, HybridAnalysisError, TransportError) as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
         return 2

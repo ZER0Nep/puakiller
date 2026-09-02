@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .critic import BenignCatalog, Critic
-from .llm import PROMPT_VERSIONS
+from .llm import PromptLibrary
 from .models import Candidate, Critique, Decision, RunProvenance, utc_now
 from .normalize import NormalizedEvidence, normalize
 from .providers import collect_all
@@ -36,10 +36,12 @@ def config_hash(config: dict) -> str:
     return hashlib.sha256(blob).hexdigest()[:16]
 
 
-def build_provenance(config: dict, generated_at=None) -> RunProvenance:
+def build_provenance(config: dict, generated_at=None, prompts=None) -> RunProvenance:
+    # Prompt versions come from the files own contents, not from a constant: a prompt edited
+    # without a version bump would otherwise change every later candidate invisibly.
     return RunProvenance(
         generated_at=generated_at or utc_now(),
-        prompt_versions=dict(PROMPT_VERSIONS),
+        prompt_versions=(prompts or PromptLibrary()).stamps(),
         config_hash=config_hash(config),
         tool_version=TOOL_VERSION,
     )
@@ -67,13 +69,17 @@ def run_pipeline(provider, seeds, family: str, benign_path, config: dict, genera
     evidence = collect_all(provider, seeds)
     normalized = normalize(evidence)
 
-    scout = Scout(config["llm_client"])
+    prompts = PromptLibrary()
+    llm_client = config["llm_client"]
+
+    scout = Scout(llm_client, prompts=prompts)
     candidate = scout.extract(normalized, family)
     candidate.run_provenance = build_provenance(
-        {k: v for k, v in config.items() if k != "llm_client"}, generated_at
+        {k: v for k, v in config.items() if k != "llm_client"}, generated_at, prompts
     )
 
-    critic = Critic(BenignCatalog.load(benign_path))
+    # The model sees the candidate a second time, in the opposite role. Advisory only.
+    critic = Critic(BenignCatalog.load(benign_path), llm_client=llm_client, prompts=prompts)
     critique = critic.review(candidate)
 
     decision = Validator().validate(candidate, critique)

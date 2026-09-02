@@ -101,6 +101,11 @@ class Config:
     llm_enabled: bool = False
     llm_provider: str = ""
     llm_model: str = ""
+    llm_key: Secret = field(default_factory=Secret)
+    # Temperature is a correctness setting here, not a style one: this is extraction, and two
+    # runs over the same evidence should not disagree about what a report said.
+    llm_temperature: float = 0.0
+    llm_max_tokens: int = 4096
 
     publish_enabled: bool = False
 
@@ -127,6 +132,9 @@ class Config:
             llm_enabled=_env_bool("LLM_ENABLED"),
             llm_provider=os.environ.get("LLM_PROVIDER", ""),
             llm_model=os.environ.get("LLM_MODEL", ""),
+            llm_key=Secret(os.environ.get("LLM_API_KEY", "")),
+            llm_temperature=float(os.environ.get("LLM_TEMPERATURE", "0") or 0),
+            llm_max_tokens=_env_int("LLM_MAX_TOKENS", 4096),
             publish_enabled=_env_bool("PUBLISH_ENABLED"),
             data_dir=Path(os.environ.get("DATA_DIR", "./data")),
             raw_retention_days=_env_int("RAW_PUBLIC_RETENTION_DAYS", 30),
@@ -155,6 +163,15 @@ class Config:
             raise ConfigError(
                 f"HYBRID_ANALYSIS_BASE_URL must be https, got {self.hybrid_analysis_base_url!r}"
             )
+
+        if self.llm_enabled and self.llm_provider not in ("", "fake", "disabled") and not self.llm_key:
+            raise ConfigError(
+                f"LLM_PROVIDER={self.llm_provider!r} needs LLM_API_KEY. Set it on the external "
+                f"server only, or leave LLM_ENABLED false to use the deterministic fake."
+            )
+
+        if not 0.0 <= self.llm_temperature <= 1.0:
+            raise ConfigError("LLM_TEMPERATURE must be between 0 and 1; extraction wants 0")
 
         if self.raw_retention_days < 1:
             raise ConfigError("RAW_PUBLIC_RETENTION_DAYS must be at least 1")
