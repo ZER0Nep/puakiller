@@ -35,6 +35,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 import urllib.error
 import urllib.request
@@ -46,7 +47,14 @@ from .security import OutboundPolicy, redact_secrets
 
 LOGGER = logging.getLogger("puakiller_intel.llm")
 
-PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "prompts"
+# Resolved relative to the repository when running from a checkout. Installed into a
+# container the package sits in site-packages, where that walk lands nowhere, so the path is
+# overridable -- and the prompts are mounted read-only rather than baked into the image, which
+# keeps "prompts are versioned artifacts" true of the deployed copy as well.
+PROMPTS_ENV = "PUAKILLER_INTEL_PROMPTS"
+PROMPTS_DIR = Path(
+    os.environ.get(PROMPTS_ENV) or Path(__file__).resolve().parents[3] / "prompts"
+)
 
 ROLES = ("scout", "critic")
 

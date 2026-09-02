@@ -29,3 +29,7 @@
 
 # CI permissions, and the workflow that holds a write token.
 /.github/               @ZER0Nep
+
+# The security posture of the external host: what the container may reach, what it may write,
+# and where the provider keys live. A one-line change here can undo every control in it.
+/deploy/                @ZER0Nep

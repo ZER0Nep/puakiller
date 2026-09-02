@@ -1,4 +1,4 @@
-# État du chantier IA — phases 0 à 5
+# État du chantier IA — phases 0 à 6
 
 Dernière mise à jour (UTC) : 2026-09-02
 Base : `ff43b48` (`main`)
@@ -19,7 +19,7 @@ pourquoi — ces dernières seules ne se déduisent pas du code.
 | 3 | Hybrid Analysis lecture seule | terminée | [#3](https://github.com/ZER0Nep/puakiller/pull/3) |
 | 4 | Rôles LLM scout / critic | terminée | [#4](https://github.com/ZER0Nep/puakiller/pull/4) |
 | 5 | Publication Issue / Draft PR | terminée | [#5](https://github.com/ZER0Nep/puakiller/pull/5) |
-| 6 | Serveur distant (Linux) | non commencée | — |
+| 6 | Serveur distant (Linux) | terminée | [#6](https://github.com/ZER0Nep/puakiller/pull/6) |
 | 7 | Triage optionnel | non commencée | — |
 
 Les quatre branches sont **empilées** et doivent être relues dans l'ordre :
@@ -30,6 +30,7 @@ feat/rule-catalog-compiler          -> #1
     feat/hybrid-analysis-readonly   -> #3
       feat/llm-scout-critic         -> #4
         feat/publish-proposals      -> #5
+          feat/deploy-scheduled-factory -> #6
 ```
 
 ## Ce qui bloque
@@ -42,7 +43,7 @@ Tout a donc été vérifié **localement**, y compris depuis un clone neuf de la
 
 - 7 suites PowerShell × 2 moteurs (Windows PowerShell 5.1 et PowerShell 7.6.5)
 - `scripts/verify-generated.py` — 5 contrôles ; `scripts/verify-proposals.py` — porte propositions
-- 187 tests Python, tous hors ligne
+- 218 tests Python, tous hors ligne
 
 **L'accès API Hybrid Analysis n'est pas encore accordé.** Une demande de vetting est en attente ;
 une relance est prête dans `~/Downloads/hybrid-analysis-vetting-email.txt`. Cela ne bloque pas le
@@ -94,6 +95,24 @@ l'est pas.
 - **La politique sortante a un axe `llm_host`**, distinct du mode : le Job B peut parler à un
   modèle, le Job C non, et les deux surviennent dans un même run `evaluate`.
 
+### Phase 6
+
+- **Le serveur ne publie pas.** Il collecte et évalue ; l'Issue ou la Draft PR vient de GitHub
+  Actions ou du poste d'un opérateur. La machine qui détient les clés fournisseur ne détient
+  jamais de droit d'écriture sur le dépôt — la séparation de la phase 5, étendue au matériel.
+- **Pas de `healthcheck:` compose.** Ces conteneurs sont des jobs batch : ils démarrent,
+  écrivent, sortent. Un healthcheck sur un conteneur qui sort par conception ne dit rien. Ce qui
+  peut réellement casser, c'est que **les cycles cessent** — et ça ne produit ni erreur ni ligne
+  de log, juste du silence. `puakiller-intel health` lit donc l'enregistrement du dernier run.
+- **Sortie 1 d'un cycle n'est pas une panne.** C'est un candidat refusé, le résultat normal.
+  `SuccessExitStatus=0 1` dans l'unité systemd le dit, sinon on apprend à ignorer une unité rouge.
+- **Un tick qui trouve le verrou pris saute, il ne fait pas la queue.** Faire la queue derrière
+  un run lent transforme un run lent en backlog. Verrou périmé après 1 h, repris, et la reprise
+  est signalée : un verrou volé veut dire qu'un run est mort sans nettoyer.
+- **Les prompts sont montés, pas embarqués dans l'image.** Défaut réel corrigé au passage :
+  installé en `site-packages`, `PROMPTS_DIR` ne trouvait rien et `PromptLibrary` estampillait
+  `+missing` — une provenance qui dit « prompt inconnu » n'est pas reproductible.
+
 ### Phase 5
 
 - **Une Draft PR n'édite pas `rules/catalog.json`.** Elle ajoute un seul fichier inerte sous
@@ -129,6 +148,12 @@ l'est pas.
 9. `publish.py`, `bundle.py` et `github.py` n'importent ni `config`, ni `transport`, ni
    `providers`, ni `hybrid_analysis`, ni `llm`, ni `pipeline`. Vérifié sur l'AST.
 10. Le bundle est un schéma fermé. Une clé inconnue est refusée, jamais ignorée.
+11. Le conteneur par défaut a `network_mode: none`. Le service en ligne est derrière un profil
+    compose et ne peut pas démarrer par accident.
+12. Aucun `GITHUB_TOKEN` sur l'hôte de collecte. Vérifié par un test sur `compose.yaml` et
+    `.env.example`.
+13. `last-run.json` et `run.lock` ont un jeu de clés fermé et ne portent ni hostname, ni
+    username, ni preuve.
 
 ---
 
@@ -139,7 +164,7 @@ l'est pas.
 python3 scripts/verify-generated.py
 python3 tests/compiler/test_escape.py
 python3 scripts/verify-proposals.py
-for t in test_intel_factory test_hybrid_analysis test_llm_roles test_publish; do
+for t in test_intel_factory test_hybrid_analysis test_llm_roles test_publish test_deploy; do
     python3 intel-factory/tests/$t.py
 done
 

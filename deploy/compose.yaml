@@ -1,0 +1,87 @@
+# Production stack for the public intel factory, on a Linux host outside the SOC.
+#
+# Two services, one image, one difference between them: whether the container has a network.
+# That difference is the whole point. `intel` reaches nothing and is what the scheduler runs by
+# default; `intel-online` is behind a profile, so it cannot start by accident, and it is the
+# only thing on this host that can talk to Hybrid Analysis or a model API.
+#
+# There is no publisher here, on purpose. This host collects and evaluates; publication happens
+# in GitHub Actions (.github/workflows/intel-propose.yml) or from an operator's checkout. That
+# keeps the GitHub write token off the machine holding the provider keys, which is the same
+# separation phase 5 enforces inside CI -- extended to the hardware.
+#
+# Every container here is a batch job. It starts, writes to /data, and exits. There is no
+# service to keep alive, no port to expose, and deliberately no compose `healthcheck:` block --
+# a healthcheck on a container that exits by design tells you nothing. Health is a property of
+# the *schedule*, and it is checked on the host by `puakiller-intel health`, which reads the
+# last-run record. See README.md.
+
+x-common: &common
+  build:
+    context: ../intel-factory
+  image: puakiller-intel:local
+  # Secrets arrive at run time, from a file this repository does not contain. Nothing is baked
+  # into the image and nothing is written back to it.
+  env_file:
+    - .env
+  environment:
+    # Prompts are mounted rather than baked, so the deployed copy is the versioned artifact in
+    # the repository rather than a snapshot of whatever the image was built from.
+    PUAKILLER_INTEL_PROMPTS: /repo/prompts
+    DATA_DIR: /data
+    PYTHONDONTWRITEBYTECODE: "1"
+    PYTHONUNBUFFERED: "1"
+  read_only: true
+  user: "10001:10001"
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  volumes:
+    - ../rules:/repo/rules:ro
+    - ../prompts:/repo/prompts:ro
+    - ./data:/data
+  # Sized for a batch job that parses JSON, not for a build. A run needing more than this is
+  # doing something it was not designed to do, and being killed is the correct outcome.
+  mem_limit: 512m
+  cpus: "1.0"
+  pids_limit: 256
+  restart: "no"
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  # The default. Reaches nothing at all -- `puakiller-intel policy --mode fixture` prints the
+  # empty destination list, and `network_mode: none` makes that a property of the host rather
+  # than a claim by the program.
+  intel:
+    <<: *common
+    network_mode: none
+    command:
+      - run
+      - --mode=fixture
+      - --family=OneStart
+      - --seed=onestart
+      - --benign=/repo/rules/benign.json
+      - --out=/data/out
+      - --lock=/data/state/run.lock
+      - --state=/data/state/last-run.json
+
+  # Behind a profile, so `docker compose up` cannot start it. Enable it only after reading the
+  # destination list that `--dry-run` prints, which is what the staged bring-up in README.md
+  # walks through step by step.
+  intel-online:
+    <<: *common
+    profiles: ["online"]
+    command:
+      - run
+      - --mode=collect
+      - --dry-run
+      - --family=CHANGE-ME
+      - --benign=/repo/rules/benign.json
+      - --out=/data/out
+      - --lock=/data/state/run.lock
+      - --state=/data/state/last-run.json

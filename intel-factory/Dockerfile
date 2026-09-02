@@ -23,6 +23,13 @@ VOLUME ["/data"]
 USER intel
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
+# Prompts are mounted read-only, not baked in. Installed into site-packages the package cannot
+# find them by walking up from its own file, and PromptLibrary would report every stamp as
+# "+missing" -- a run whose provenance says the prompt is unknown is not reproducible. The
+# mount also means the deployed prompt is the versioned artifact in the repository rather than
+# a snapshot of whatever the image happened to be built from.
+ENV PUAKILLER_INTEL_PROMPTS=/repo/prompts
+
 # No secrets are baked in, and none are needed: fixture mode is the default.
 ENTRYPOINT ["puakiller-intel"]
 CMD ["policy", "--mode", "fixture"]

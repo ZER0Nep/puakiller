@@ -38,9 +38,10 @@ from .critic import BenignCatalog
 from .hybrid_analysis import HybridAnalysisError, HybridAnalysisProvider, plan_requests
 from .llm import DisabledLLM, FakeDeterministicLLM, LLMError, build_client
 from .github import GitHubClient, GitHubError, Repo
-from .pipeline import render_report, run_pipeline, write_outputs
+from .pipeline import TOOL_VERSION, render_report, run_pipeline, write_outputs
 from .providers import FixtureProvider, ProviderError
 from .publish import PublishError, execute, plan_publication, write_proposal
+from .runlock import LockBusy, RunLock, health, record_run
 from .scout import ScoutError
 from .security import ForbiddenDataError, OutboundPolicy, redact_secrets
 from .transport import DryRunBlocked, ReadOnlyHttpClient, TransportError
@@ -92,6 +93,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="plan every request and print the destinations, then send nothing",
     )
+    run.add_argument(
+        "--lock",
+        type=Path,
+        default=None,
+        help="anti-overlap lock file; a tick that finds it held skips instead of queueing",
+    )
+    run.add_argument(
+        "--state",
+        type=Path,
+        default=None,
+        help="write the last-run record here, for the container healthcheck",
+    )
 
     publish = sub.add_parser(
         "publish", help="open an Issue or a Draft PR from a bundle; needs no provider or model key"
@@ -106,6 +119,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--execute",
         action="store_true",
         help="actually create the Issue or Draft PR; without it nothing is sent",
+    )
+
+    health_cmd = sub.add_parser("health", help="is the scheduled factory still running?")
+    health_cmd.add_argument("--state", type=Path, required=True, help="the last-run record")
+    health_cmd.add_argument(
+        "--max-age",
+        type=int,
+        default=90_000,
+        help="seconds since the last run before the container is unhealthy (default: 25h)",
     )
 
     cache = sub.add_parser("cache", help="inspect or prune the response cache")
@@ -192,7 +214,8 @@ def cmd_cache(args) -> int:
     return 0
 
 
-def cmd_run(args) -> int:
+def _run_once(args) -> tuple:
+    """One pipeline run. Returns (exit code, route) so the caller can record both."""
     policy = OutboundPolicy(mode=args.mode, triage_enabled=args.triage)
     seeds = args.seed or [args.family]
 
@@ -210,7 +233,7 @@ def cmd_run(args) -> int:
                 print("  no outbound request would be made")
             for line in planned:
                 print(f"  would GET {line}")
-            return 0
+            return 0, "dry-run"
 
         if not Path(args.benign).is_file():
             raise ProviderError(f"benign corpus not found: {args.benign}")
@@ -238,21 +261,21 @@ def cmd_run(args) -> int:
         # silent about the value itself.
         print(f"REFUSED: {exc}", file=sys.stderr)
         print("Nothing was sent anywhere. Fix the source; do not sanitise it by hand.", file=sys.stderr)
-        return 2
+        return 2, "refused"
     except ConfigError as exc:
         # A live mode that cannot work must say so rather than return an empty result set: an
         # empty collector is indistinguishable from a collector that found nothing.
         print(f"error: {exc}", file=sys.stderr)
-        return 2
+        return 2, "error"
     except DryRunBlocked as exc:
         print(f"dry run stopped before sending: {exc}", file=sys.stderr)
-        return 0
+        return 0, "dry-run"
     except LLMError as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
-        return 2
+        return 2, "error"
     except (ProviderError, ScoutError, HybridAnalysisError, TransportError) as exc:
         print(f"error: {redact_secrets(str(exc))}", file=sys.stderr)
-        return 2
+        return 2, "error"
 
     report = render_report(result, policy.describe())
     if args.out:
@@ -273,9 +296,55 @@ def cmd_run(args) -> int:
                 print(f"wrote {write_bundle(bundle, bundle_path)}")
             except (BundleError, ForbiddenDataError) as exc:
                 print(f"REFUSED to build a publication bundle: {exc}", file=sys.stderr)
-                return 2
+                return 2, "error"
 
-    return 0 if result.decision.accepted else 1
+    return (0 if result.decision.accepted else 1), result.decision.route
+
+
+def cmd_run(args) -> int:
+    """Wrap one run in the anti-overlap lock and the last-run record.
+
+    Both are optional and off unless a path is given, so the interactive command stays a plain
+    batch command. They exist for the scheduled container, where two facts have to survive the
+    process: that a run is in progress, and that one finished.
+    """
+    lock = None
+    if args.lock:
+        try:
+            lock = RunLock(args.lock, label=args.family).acquire()
+        except LockBusy as exc:
+            # Not an error. A tick that skips because the previous one is still working is the
+            # lock doing its job, and failing the container for it would page someone.
+            print(f"skipped: {exc}")
+            return 0
+        if lock.stole_stale_lock:
+            print(f"warning: {args.lock} was stale and has been taken over; a previous run died",
+                  file=sys.stderr)
+
+    try:
+        code, route = _run_once(args)
+    finally:
+        if lock is not None:
+            lock.release()
+
+    if args.state:
+        path = record_run(
+            args.state,
+            mode=args.mode,
+            family=args.family,
+            route=route,
+            exit_code=code,
+            tool_version=TOOL_VERSION,
+        )
+        print(f"wrote {path}")
+    return code
+
+
+def cmd_health(args) -> int:
+    """The container healthcheck. No network, no key, no provider -- it reads one file."""
+    healthy, reason = health(args.state, max_age_seconds=args.max_age)
+    print(("OK: " if healthy else "UNHEALTHY: ") + reason)
+    return 0 if healthy else 1
 
 
 def cmd_publish(args) -> int:
@@ -343,6 +412,7 @@ def main(argv=None) -> int:
     handlers = {
         "run": cmd_run,
         "publish": cmd_publish,
+        "health": cmd_health,
         "policy": cmd_policy,
         "fixtures": cmd_fixtures,
         "cache": cmd_cache,

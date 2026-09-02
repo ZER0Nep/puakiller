@@ -47,6 +47,12 @@ jobs:
           }
           if ($bad) { exit 1 } else { Write-Host "OK: no PowerShell 7-only constructs" }
 
+      - name: Optional validators used by the JSON and deployment gates
+        shell: bash
+        # Both are optional at run time -- the hand-written checks carry the safety properties
+        # and run without them -- but CI should exercise the strict path, not the fallback.
+        run: python3 -m pip install --quiet --disable-pip-version-check jsonschema pyyaml
+
       - name: Generated rule regions are in sync with rules/catalog.json
         shell: bash
         run: python3 scripts/verify-generated.py
@@ -94,6 +100,10 @@ jobs:
           done
           printf '%s' "$block" | grep -q 'contents: write' || { echo "FAIL: publish job lost its permissions block"; exit 1; }
           echo "OK: the publish job sees only GITHUB_TOKEN"
+
+      - name: Deployment tests (lock, health, container shape - no docker needed)
+        shell: bash
+        run: python3 intel-factory/tests/test_deploy.py
 
       - name: Intel factory reaches nothing in its default mode
         shell: bash

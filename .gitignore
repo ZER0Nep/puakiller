@@ -5,3 +5,9 @@ __pycache__/
 # scripts/compile-rules.py --out writes here. The generated region is never committed on its
 # own, only applied into the two removal scripts by scripts/apply-generated.py.
 build/
+
+# Deployment: filled secrets and runtime state never enter the repository.
+deploy/.env
+deploy/.env.*
+!deploy/.env.example
+deploy/data/
