@@ -260,7 +260,14 @@ $Puas = @(
     # shift-v147.1.1-web.exe, and persistence task ShiftLaunchTask. Shift is a legitimate signed product, so neither the
     # generic process name nor its publisher is globally blocklisted. The generic Shift folder/key is guarded by static
     # path, filename, or signer evidence before removal.
-    @{ Name='ShiftBrowser'; Label='ShiftBrowser'; Rx='(?i)(\bShiftLaunchTask\b|\\Shift\\chromium\\shift\.exe\b|\bShift Browser\b|\bShift_[a-z]{6}\.(?:exe|tmp)\b|\bshift-v147\.1\.1-web\.exe\b)'; Proc=@(); Pub='(?i)^Shift Technologies Inc\.?$'; Nw=$false; Harden=@(); Aliases=@('Shift'); RegNames=@('Shift') }
+    @{ Name='ShiftBrowser'; Label='ShiftBrowser'; Rx='(?i)(\bShiftLaunchTask\b|\\Shift\\chromium\\shift\.exe\b|\bShift Browser\b|\bShift_[a-z]{6}\.(?:exe|tmp)\b|\bshift-v147\.1\.1-web\.exe\b)'; Proc=@(); Pub='(?i)^Shift Technologies Inc\.?$'; Nw=$false; Harden=@(); Aliases=@('Shift'); RegNames=@('Shift') },
+
+    # PDF Spark - ajout automatique 2026-09-05 (Hybrid Analysis, verdict malicious, score 100).
+    #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\PDF SPARK_IS1
+    #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\APP PATHS\PDFSPARKONSOFT.TMP
+    #   persistance : HKLM\SOFTWARE\WOW6432NODE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\PDF SPARK_IS1
+    #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\PDF SPARK_IS1
+    @{ Name='PDF Spark'; Label='PDF Spark'; Rx='(?i)(?<![a-z0-9])PDF\s?Spark(?:OnSoft)?(?![a-z0-9])'; Proc=@('PDF Spark','PDFSparkOnSoft'); Pub='(?i)Mainstay\s*Crypto\s*LLC'; Nw=$false; Harden=@('Local\Programs\PDF Spark'); Hashes=@('51c9dd59e1f32dd8d2e61ee600e08bdb78d1fc0530dbcd0fccea57ba85037fe4','47f65352a88a15fbf35e61ba2d7be374850b345d00c572c2988a2fd366803f71','b7c46a68f8aefa3baecb64f8f022fb2af93a2ae5c8b5c16233b7701a25f0bec9','8ee6e0d63b89d920dc627fca1af5f19653d51e8318adb064cc4f122576e780ce','df00f9484fce6791a5dcfd5ac70ab7f91d94a182e01cb048e1b24f8c0789cf33','e7dce4a36c432609cc9be4c8ee165ee06f5ffae7fb68fd660c39f7c8e9c206a2','586c280401be7199928a8893039b23091e95848bbcb41a6df109a32f812927fe','a41750524e50de95da2142d490fed187d5621e92f7f733f9eedc723163481c4a') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
