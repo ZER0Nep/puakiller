@@ -106,7 +106,8 @@ $BENIGN_NAMES = @(
   'Invoices','Tax2024','Resume','Family Photos','Minecraft','MyConverterNotes','ManualsLib',
   'Recipe Setup.exe','RecipeKeeper','My Recipe Box','Paprika Recipe Manager','MyRecipeSetup.exe',
   'OB','OBS Studio','Object Browser','One Browser Tab','OneBrowserNotes',
-  'Shift','Night Shift','Shift Work Calendar','Shift4','Shift Notes','C:\Tools\Shift\unrelated.exe'
+  'Shift','Night Shift','Shift Work Calendar','Shift4','Shift Notes','C:\Tools\Shift\unrelated.exe',
+  'Spark','Apache Spark','PDFSparkle','PDF Sparkle','Sparklines.pdf'
 )
 # Legitimate / OS process names that must NEVER appear in a PUA's Proc kill list.
 $BENIGN_PROCS = @(
@@ -138,13 +139,25 @@ $MAL_RX = @(
   'KitchenCanvas','KitchenCanvas-Setup-3.4.exe','RecipeSetup_275522.exe','KitchenCanvas_239364.exe',
   'C:\Users\x\AppData\Local\Programs\KitchenCanvas\KitchenCanvas.exe',
   'Shift Browser','ShiftLaunchTask','Shift_hwemja.exe','shift-v147.1.1-web.exe',
-  'C:\Users\x\AppData\Local\Shift\chromium\shift.exe'
+  'C:\Users\x\AppData\Local\Shift\chromium\shift.exe',
+  'PDF Spark','PDFSparkOnSoft','PDFSparkOnSoft.tmp','PDF Spark_is1',
+  'C:\Users\x\AppData\Local\Programs\PDF Spark\PDFSparkOnSoft.exe'
 )
 $MAL_PULSE = @('PulseBrowser','Pulse Browser','PulseSoftware','Pulse Software')
-$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor','ShiftBrowser')
+$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor','ShiftBrowser','PDF Spark')
 $MAL_ALIASES = @('OB','Shift')
-$MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor')
-$MAL_HASHES = @('fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957')
+$MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor','PDF Spark','PDFSparkOnSoft')
+$MAL_HASHES = @(
+  'fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957',
+  '51c9dd59e1f32dd8d2e61ee600e08bdb78d1fc0530dbcd0fccea57ba85037fe4',
+  '47f65352a88a15fbf35e61ba2d7be374850b345d00c572c2988a2fd366803f71',
+  'b7c46a68f8aefa3baecb64f8f022fb2af93a2ae5c8b5c16233b7701a25f0bec9',
+  '8ee6e0d63b89d920dc627fca1af5f19653d51e8318adb064cc4f122576e780ce',
+  'df00f9484fce6791a5dcfd5ac70ab7f91d94a182e01cb048e1b24f8c0789cf33',
+  'e7dce4a36c432609cc9be4c8ee165ee06f5ffae7fb68fd660c39f7c8e9c206a2',
+  '586c280401be7199928a8893039b23091e95848bbcb41a6df109a32f812927fe',
+  'a41750524e50de95da2142d490fed187d5621e92f7f733f9eedc723163481c4a'
+)
 $MAL_PUBLISHERS = @(
   'GLINT SOFTWARE SDN. BHD.','ECHO INFINI SDN. BHD.','Byte Media Sdn. Bhd.',
   'OneStart Technologies LLC','SUMMIT NEXUS Holdings LLC','VAST LAKE LTD','Caerus Media LLC',

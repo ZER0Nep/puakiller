@@ -38,7 +38,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.8.0'
+$ScriptVersion = '1.9.0'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }

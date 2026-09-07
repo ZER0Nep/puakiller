@@ -10,7 +10,7 @@ jobs:
     name: PUA rules + safety
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Parse-check all scripts (Windows PowerShell 5.1)
         shell: powershell
