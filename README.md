@@ -6,7 +6,7 @@ It scrubs Pulse Browser, OpenBook, ConvertMate, PDFEditor, EpiBrowser, OneStart,
 ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, Shift Browser, PDF Spark, and their leftovers.
 
 <!-- stats:start -->
-[![Total fetches](https://img.shields.io/badge/total%20fetches-106-2ea44f)](https://script.nep.red/stat)
+[![Total fetches](https://img.shields.io/badge/total%20fetches-107-2ea44f)](https://script.nep.red/stat)
 <!-- stats:end -->
 
 ## Run
