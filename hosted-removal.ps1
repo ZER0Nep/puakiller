@@ -266,7 +266,16 @@ $Puas = @(
     #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\APP PATHS\PDFSPARKONSOFT.TMP
     #   persistance : HKLM\SOFTWARE\WOW6432NODE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\PDF SPARK_IS1
     #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\PDF SPARK_IS1
-    @{ Name='PDF Spark'; Label='PDF Spark'; Rx='(?i)(?<![a-z0-9])PDF\s?Spark(?:OnSoft)?(?![a-z0-9])'; Proc=@('PDF Spark','PDFSparkOnSoft'); Pub='(?i)Mainstay\s*Crypto\s*LLC'; Nw=$false; Harden=@('Local\Programs\PDF Spark'); Hashes=@('51c9dd59e1f32dd8d2e61ee600e08bdb78d1fc0530dbcd0fccea57ba85037fe4','47f65352a88a15fbf35e61ba2d7be374850b345d00c572c2988a2fd366803f71','b7c46a68f8aefa3baecb64f8f022fb2af93a2ae5c8b5c16233b7701a25f0bec9','8ee6e0d63b89d920dc627fca1af5f19653d51e8318adb064cc4f122576e780ce','df00f9484fce6791a5dcfd5ac70ab7f91d94a182e01cb048e1b24f8c0789cf33','e7dce4a36c432609cc9be4c8ee165ee06f5ffae7fb68fd660c39f7c8e9c206a2','586c280401be7199928a8893039b23091e95848bbcb41a6df109a32f812927fe','a41750524e50de95da2142d490fed187d5621e92f7f733f9eedc723163481c4a') }
+    @{ Name='PDF Spark'; Label='PDF Spark'; Rx='(?i)(?<![a-z0-9])PDF\s?Spark(?:OnSoft)?(?![a-z0-9])'; Proc=@('PDF Spark','PDFSparkOnSoft'); Pub='(?i)Mainstay\s*Crypto\s*LLC'; Nw=$false; Harden=@('Local\Programs\PDF Spark'); Hashes=@('51c9dd59e1f32dd8d2e61ee600e08bdb78d1fc0530dbcd0fccea57ba85037fe4','47f65352a88a15fbf35e61ba2d7be374850b345d00c572c2988a2fd366803f71','b7c46a68f8aefa3baecb64f8f022fb2af93a2ae5c8b5c16233b7701a25f0bec9','8ee6e0d63b89d920dc627fca1af5f19653d51e8318adb064cc4f122576e780ce','df00f9484fce6791a5dcfd5ac70ab7f91d94a182e01cb048e1b24f8c0789cf33','e7dce4a36c432609cc9be4c8ee165ee06f5ffae7fb68fd660c39f7c8e9c206a2','586c280401be7199928a8893039b23091e95848bbcb41a6df109a32f812927fe','a41750524e50de95da2142d490fed187d5621e92f7f733f9eedc723163481c4a') },
+
+    # DocumentTransform - ajout automatique 2026-09-08 (Hybrid Analysis, verdict malicious, score 76).
+    #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\APP PATHS\OUTLOOK.EXE
+    #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\APP PATHS\5861BFE3FE17CAC44241715D2B9C383CEF3BEA165DE2CF2EBAC6EC69F51DCE6C.EXE
+    #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\APP PATHS\5861BFE3FE17CAC44241715D2B9C383CEF3BEA165DE2CF2EBAC6EC69F51DCE6C.EXE
+    #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\DOCUMENTTRANSFORM
+    #   tache       : 5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c.exe" (Path: "HKLM\SOFTWARE\POLICIES\MICROSOFT\WINDOWS\SAFER\CODEIDENTIFIERS"; Key: "TRANSPARENT
+    #   tache       : 5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c.exe" (Path: "HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\INTERNET SETTINGS"; Key: "WARNONHTT
+    @{ Name='DocumentTransform'; Label='Document Transform'; Rx='(?i)(?<![A-Za-z0-9])Document\s?Transform(?![A-Za-z0-9])'; Proc=@(); Pub='(?i)Monetize\s*forward\s*LLC'; Nw=$true; Harden=@('Roaming\DocumentTransform','Roaming\Microsoft\Windows\Start Menu\Programs\DocumentTransform'); RegNames=@('DocumentTransform'); Hashes=@('5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
