@@ -197,7 +197,7 @@ function Send-Stat([string]$Phase) {
 #             top-level downloaded executables (static hashing; never execute).
 # ============================================================================
 $Puas = @(
-    @{ Name='OpenBook';    Label='OpenBook';    Rx='(?i)\bOpenBook\b';    Proc=@('OpenBook');    Pub='';                            Nw=$true;  Harden=@('Local\OpenBook','Roaming\OpenBook') },
+    @{ Name='OpenBook';    Label='Open Book';    Rx='(?i)\bOpenBook\b';    Proc=@('OpenBook');    Pub='';                            Nw=$true;  Harden=@('Local\OpenBook','Roaming\OpenBook') },
     @{ Name='ConvertMate'; Label='ConvertMate'; Rx='(?i)\bConvertMate\b'; Proc=@('ConvertMate'); Pub='(?i)Amaryllis';                Nw=$false; Harden=@('Local\ConvertMate') },
     @{ Name='PDFEditor';   Label='PDFEditor';   Rx='(?i)\bPDFEditor\b';   Proc=@('PDFEditor');   Pub='(?i)(AppSuite|Eclipse Media)'; Nw=$false; Harden=@('Local\PDFEditor','Roaming\PDFEditor','Local\Programs\PDFEditor') },
 
