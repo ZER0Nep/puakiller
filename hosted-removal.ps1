@@ -275,7 +275,13 @@ $Puas = @(
     #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\DOCUMENTTRANSFORM
     #   tache       : 5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c.exe" (Path: "HKLM\SOFTWARE\POLICIES\MICROSOFT\WINDOWS\SAFER\CODEIDENTIFIERS"; Key: "TRANSPARENT
     #   tache       : 5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c.exe" (Path: "HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\INTERNET SETTINGS"; Key: "WARNONHTT
-    @{ Name='DocumentTransform'; Label='Document Transform'; Rx='(?i)(?<![A-Za-z0-9])Document\s?Transform(?![A-Za-z0-9])'; Proc=@(); Pub='(?i)Monetize\s*forward\s*LLC'; Nw=$true; Harden=@('Roaming\DocumentTransform','Roaming\Microsoft\Windows\Start Menu\Programs\DocumentTransform'); RegNames=@('DocumentTransform'); Hashes=@('5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c') }
+    @{ Name='DocumentTransform'; Label='Document Transform'; Rx='(?i)(?<![A-Za-z0-9])Document\s?Transform(?![A-Za-z0-9])'; Proc=@(); Pub='(?i)Monetize\s*forward\s*LLC'; Nw=$true; Harden=@('Roaming\DocumentTransform','Roaming\Microsoft\Windows\Start Menu\Programs\DocumentTransform'); RegNames=@('DocumentTransform'); Hashes=@('5861bfe3fe17cac44241715d2b9c383cef3bea165de2cf2ebac6ec69f51dce6c') },
+
+    # Lavasoft - ajout automatique 2026-09-10 (tria.ge, verdict malicious, score 9/10).
+    #   persistance : HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\GrpConv
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Web Companion
+    #   rapport     : https://tria.ge/260910-kjdn6sak2y
+    @{ Name='Lavasoft'; Label='Web Companion (Lavasoft)'; Rx='(?i)(?<![a-z0-9])(?:Lavasoft\\Web[ ]?Companion|WebCompanion(?:Installer)?|Lavasoft\.WCAssistant(?:\.WcfService|\.Service\.Logger)?|Lavasoft\.AppCore|Lavasoft\.Utils(?:\.SqlLite)?|Lavasoft\.Events|mitm_install_tool_dci|bddci_core4|CompanionService\.WinService)(?![a-z0-9])'; Proc=@('CompanionService.WinService','mitm_install_tool_dci','DCIService','WebCompanion','WebCompanionInstaller'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Web Companion'); RegNames=@('Web Companion'); Hashes=@('be2a29b717564c78912fe6caab8a0d2f9484ef705fc23ca165550f522436a9fe') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
