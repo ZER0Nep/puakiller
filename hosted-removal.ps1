@@ -281,7 +281,7 @@ $Puas = @(
     #   persistance : HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\GrpConv
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Web Companion
     #   rapport     : https://tria.ge/260910-kjdn6sak2y
-    @{ Name='Lavasoft'; Label='Web Companion (Lavasoft)'; Rx='(?i)(?<![a-z0-9])(?:Lavasoft\\Web[ ]?Companion|WebCompanion(?:Installer)?|Lavasoft\.WCAssistant(?:\.WcfService|\.Service\.Logger)?|Lavasoft\.AppCore|Lavasoft\.Utils(?:\.SqlLite)?|Lavasoft\.Events|mitm_install_tool_dci|bddci_core4|CompanionService\.WinService)(?![a-z0-9])'; Proc=@('CompanionService.WinService','mitm_install_tool_dci','DCIService','WebCompanion','WebCompanionInstaller'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Web Companion'); RegNames=@('Web Companion'); Hashes=@('be2a29b717564c78912fe6caab8a0d2f9484ef705fc23ca165550f522436a9fe') }
+    @{ Name='Lavasoft'; Label='Web Companion (Lavasoft)'; Rx='(?i)(?<![a-z0-9])(?:Lavasoft\\Web[ ]?Companion|WebCompanion(?:Installer)?|Lavasoft\.WCAssistant(?:\.WcfService|\.Service\.Logger)?|Lavasoft\.AppCore|Lavasoft\.Utils(?:\.SqlLite)?|Lavasoft\.Events|mitm_install_tool_dci|bddci_core4|CompanionService\.WinService)(?![a-z0-9])'; Proc=@('CompanionService.WinService','mitm_install_tool_dci','DCIService','WebCompanion','WebCompanionInstaller'); Pub=''; Nw=$false; Harden=@('Local\Lavasoft','Roaming\Lavasoft'); Aliases=@('Web Companion'); RegNames=@('Lavasoft'); Hashes=@('be2a29b717564c78912fe6caab8a0d2f9484ef705fc23ca165550f522436a9fe') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
