@@ -16,7 +16,7 @@ Paste this into PowerShell:
 
 ```powershell
 irm "https://script.nep.red/?nocache=$([guid]::NewGuid())" -Headers @{'Cache-Control'='no-cache, no-store';Pragma='no-cache'} | iex
-````
+```
 
 ### Alternative
 
@@ -35,4 +35,42 @@ uses machine/all-user scope under `SYSTEM`.
 
 No menu or confirmation.
 
+### Temporary Pastebin.ai fallback
+
+If `script.nep.red` is unavailable or blocked by an SSL/TLS trust error, the
+script can temporarily be uploaded to Pastebin.ai from another machine :
+
+```bash
+file="./PUAKILLER.ps1"
+
+response=$(
+  python3 -c '
+import json,sys
+print(json.dumps({
+    "content": open(sys.argv[1]).read(),
+    "title": "script.ps1",
+    "language": "powershell",
+    "visibility": "unlisted",
+    "expiration": "10m"
+}))
+' "$file" |
+  curl -sS -X POST \
+    "https://pastebin.ai/api/v1/pastes" \
+    -H "Content-Type: application/json" \
+    --data-binary @-
+)
+
+echo "$response"
 ```
+
+The response is JSON and contains the raw URL of the uploaded script.
+
+To print only the raw URL without `jq`:
+
+```bash
+raw_url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["raw_url"])' <<< "$response")
+
+echo "$raw_url"
+```
+
+The printed raw URL can then be fetched directly with `curl` or PowerShell.
