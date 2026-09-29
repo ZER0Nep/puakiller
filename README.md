@@ -41,6 +41,16 @@ If `script.nep.red` is unavailable or blocked by an SSL/TLS trust error, the
 script can temporarily be uploaded to Pastebin.ai from another machine :
 
 ```bash
+nonce=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+u="https://script.nep.red/?nocache=$nonce"
+p="./PUAKILLER.ps1"
+
+curl --fail --location \
+  -H 'Cache-Control: no-cache, no-store' \
+  -H 'Pragma: no-cache' \
+  --output "$p" \
+  "$u"
+
 file="./PUAKILLER.ps1"
 
 response=$(
