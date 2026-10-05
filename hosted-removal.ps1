@@ -289,7 +289,18 @@ $Puas = @(
     #   persistance : HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCAppStore\DisplayName
     #   persistance : HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCAppStore\UninstallString
     #   rapport     : https://tria.ge/260929-kz851swcje
-    @{ Name='PCAppStore'; Label='PCAppStore'; Rx='(?i)(?<![a-z0-9])(?:PC\s?App\s?Store|PcAppStoreSRV|pcappstore\.ico|pcapp\.store)(?![a-z0-9])'; Proc=@('PcAppStoreSRV','PcAppStore'); Pub=''; Nw=$false; Harden=@(); Aliases=@('PC App Store'); RegNames=@('PCAppStore'); Hashes=@('e8a2b565985d912488fd0a3dc5217aef049143e247bbf6b3fbf0907fac04fd3d') }
+    @{ Name='PCAppStore'; Label='PCAppStore'; Rx='(?i)(?<![a-z0-9])(?:PC\s?App\s?Store|PcAppStoreSRV|pcappstore\.ico|pcapp\.store)(?![a-z0-9])'; Proc=@('PcAppStoreSRV','PcAppStore'); Pub=''; Nw=$false; Harden=@(); Aliases=@('PC App Store'); RegNames=@('PCAppStore'); Hashes=@('e8a2b565985d912488fd0a3dc5217aef049143e247bbf6b3fbf0907fac04fd3d') },
+
+    # OneLaunch - ajout automatique 2026-10-05 (tria.ge, verdict malicious, score 10/10).
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\OneLaunchChromium
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\OneLaunch
+    #   persistance : HKLM\SOFTWARE\Classes\CLSID\{99b9f71c-c1a0-6069-463a-4e668ae065ac}
+    #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\{4947c51a-26a9-4ed0-9a7b-c21e5ae0e71a}_is1
+    #   tache       : "schtasks" /Delete /TN "OneLaunchLaunchTask" /F
+    #   tache       : "schtasks" /Delete /TN "ChromiumLaunchTask" /F
+    #   tache       : "schtasks" /Delete /TN "OneLaunchUpdateTask" /F
+    #   rapport     : https://tria.ge/261005-hwkxxazv6n
+    @{ Name='OneLaunch'; Label='OneLaunch'; Rx='(?i)(?<![a-z0-9])(?:OneLaunchHTML|OneLaunchChromium|OneLaunchUpdater|OneLaunchLaunchTask|OneLaunchUpdateTask|ChromiumLaunchTask|ChromiumStartupProxy|onelaunchtray|OneLaunch|99b9f71c-c1a0-6069-463a-4e668ae065ac)(?![a-z0-9])'; Proc=@('OneLaunch','onelaunch','onelaunchtray','ChromiumStartupProxy'); Pub=''; Nw=$false; Harden=@('Local\OneLaunch'); RegNames=@('OneLaunch','OneLaunchHTML','OneLaunchChromium','OneLaunchUpdater'); Hashes=@('6208acc0f0333a79efcb375e127926116cc771d6d6585098206b6f99c79609e0') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
