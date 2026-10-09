@@ -301,7 +301,12 @@ $Puas = @(
     #   tache       : "schtasks" /Delete /TN "ChromiumLaunchTask" /F
     #   tache       : "schtasks" /Delete /TN "OneLaunchUpdateTask" /F
     #   rapport     : https://tria.ge/261005-hwkxxazv6n
-    @{ Name='OneLaunch'; Label='OneLaunch'; Rx='(?i)(?<![a-z0-9])(?:OneLaunchHTML|OneLaunchChromium|OneLaunchUpdater|OneLaunchLaunchTask|OneLaunchUpdateTask|ChromiumLaunchTask|ChromiumStartupProxy|onelaunchtray|OneLaunch|99b9f71c-c1a0-6069-463a-4e668ae065ac)(?![a-z0-9])'; Proc=@('OneLaunch','onelaunch','onelaunchtray','ChromiumStartupProxy'); Pub=''; Nw=$false; Harden=@('Local\OneLaunch'); RegNames=@('OneLaunch','OneLaunchHTML','OneLaunchChromium','OneLaunchUpdater'); Hashes=@('6208acc0f0333a79efcb375e127926116cc771d6d6585098206b6f99c79609e0') }
+    @{ Name='OneLaunch'; Label='OneLaunch'; Rx='(?i)(?<![a-z0-9])(?:OneLaunchHTML|OneLaunchChromium|OneLaunchUpdater|OneLaunchLaunchTask|OneLaunchUpdateTask|ChromiumLaunchTask|ChromiumStartupProxy|onelaunchtray|OneLaunch|99b9f71c-c1a0-6069-463a-4e668ae065ac)(?![a-z0-9])'; Proc=@('OneLaunch','onelaunch','onelaunchtray','ChromiumStartupProxy'); Pub=''; Nw=$false; Harden=@('Local\OneLaunch'); RegNames=@('OneLaunch','OneLaunchHTML','OneLaunchChromium','OneLaunchUpdater'); Hashes=@('6208acc0f0333a79efcb375e127926116cc771d6d6585098206b6f99c79609e0') },
+
+    # Artificius Browser Solutions - ajout automatique 2026-10-09 (tria.ge, verdict malicious, score 8/10).
+    #   persistance : HKLM\SYSTEM\CurrentControlSet\Services\VSS\Diag
+    #   rapport     : https://tria.ge/261008-rfmw1ahv7l
+    @{ Name='Artificius Browser Solutions'; Label='Artificius Browser (Dragon Boss)'; Rx='(?i)artificius[ _]?browser'; Proc=@('ArtificiusUpdater'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Artificius Browser'); Hashes=@('bd62d3808ef29c557da64b412c4422935a641c22e2bdcfe5128c96f2ff5b5e99') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
