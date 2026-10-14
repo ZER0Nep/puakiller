@@ -305,7 +305,15 @@ $Puas = @(
     # Artificius Browser Solutions - ajout automatique 2026-10-09 (tria.ge, verdict malicious, score 8/10).
     #   persistance : HKLM\SYSTEM\CurrentControlSet\Services\VSS\Diag
     #   rapport     : https://tria.ge/261008-rfmw1ahv7l
-    @{ Name='Artificius Browser Solutions'; Label='Artificius Browser (Dragon Boss)'; Rx='(?i)artificius[ _]?browser'; Proc=@('ArtificiusUpdater'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Artificius Browser'); Hashes=@('bd62d3808ef29c557da64b412c4422935a641c22e2bdcfe5128c96f2ff5b5e99') }
+    @{ Name='Artificius Browser Solutions'; Label='Artificius Browser (Dragon Boss)'; Rx='(?i)artificius[ _]?browser'; Proc=@('ArtificiusUpdater'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Artificius Browser'); Hashes=@('bd62d3808ef29c557da64b412c4422935a641c22e2bdcfe5128c96f2ff5b5e99') },
+
+    # kingsoft - ajout automatique 2026-10-14 (Hybrid Analysis, verdict malicious, score 100/100).
+    #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\KINGSOFT OFFICE
+    #   persistance : HKLM\SOFTWARE\WOW6432NODE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\KINGSOFT OFFICE
+    #   persistance : HKLM\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\KINGSOFT OFFICE
+    #   persistance : HKLM\SYSTEM\CurrentControlSet\SERVICES\DNS
+    #   tache       : wps_office_inst.exe" (Path: "HKLM\SOFTWARE\POLICIES\MICROSOFT\WINDOWS\SAFER\CODEIDENTIFIERS"; Key: "TRANSPARENTENABLED")
+    @{ Name='kingsoft'; Label='Kingsoft Office (WPS)'; Rx='(?i)(?<![a-z0-9])kingsoft(?![a-z0-9])'; Proc=@(); Pub='(?i)WPS\s*SOFTWARE\s*PTE\.\s*LTD\.'; Nw=$false; Harden=@('Roaming\kingsoft'); RegNames=@('Kingsoft','Kingsoft Office'); Hashes=@('836456092e8ee030c623855118032b9b9680524de2d484500f3eadb8ec8ead2b','16ca266dad461e8dd87a610ed438f6e330ef57c3b5826154a332d53256613854','8b3d9f6a5f38e85afa7c278376da31dcb3d5205c0ff1b8a7b60c17a73817434d','c7d90ad8876fa0e4c4ba669fd04b9e6b62cf89614b127a5416f7c8bd1cbc84d0','d3a314b5fcf363f67fb86c32d2d2ff547a663eacd44bf18e15d9d78593328c92','ac55ce681bf71b8647ec778af8f1d1c70eb20d228ac280a0520d1cc62f16b1b1','c5114ee341716213d33842ff69cffdb8415e758e22675a6c553fd22f8a1449b7','c44d9839740a1123366f0d05733e8a30fd5e5dc3be997c19ec56ecfa9ad3a8ff') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
