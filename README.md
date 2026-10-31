@@ -7,7 +7,7 @@ ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, Shift Browser, PDF Spark, 
 and their leftovers.
 
 <!-- stats:start -->
-[![Total fetches](https://img.shields.io/badge/total%20fetches-194-2ea44f)](https://script.nep.red/stat)
+[![Total fetches](https://img.shields.io/badge/total%20fetches-195-2ea44f)](https://script.nep.red/stat)
 <!-- stats:end -->
 
 ## Run
