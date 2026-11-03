@@ -46,6 +46,10 @@ jobs:
         shell: powershell
         run: .\tests\Test-PuaRules.ps1
 
+      - name: Kingsoft Antivirus cleanup simulation (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./tests/Test-KingsoftAntivirus.ps1
+
       - name: Stats updater tests (Windows PowerShell 5.1)
         shell: powershell
         run: .\tests\Test-StatsUpdater.ps1
@@ -69,6 +73,10 @@ jobs:
       - name: PUA rule + safety tests (PowerShell 7)
         shell: pwsh
         run: ./tests/Test-PuaRules.ps1
+
+      - name: Kingsoft Antivirus cleanup simulation (PowerShell 7)
+        shell: pwsh
+        run: ./tests/Test-KingsoftAntivirus.ps1
 
       - name: Stats updater tests (PowerShell 7)
         shell: pwsh
