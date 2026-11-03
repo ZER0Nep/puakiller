@@ -38,7 +38,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
     }
 }
 
-$ScriptVersion = '1.9.1-kingsoft-full'
+$ScriptVersion = '1.9.2-kingsoft-antivirus'
 $ScriptUrl     = 'https://script.nep.red'
 $StatsUrl      = ''
 $RunId         = if ($StatId) { $StatId } else { [guid]::NewGuid().ToString() }
@@ -314,6 +314,14 @@ $Puas = @(
     #   persistance : HKLM\SYSTEM\CurrentControlSet\Services\VSS\Diag
     #   rapport     : https://tria.ge/261008-rfmw1ahv7l
     @{ Name='Artificius Browser Solutions'; Label='Artificius Browser (Dragon Boss)'; Rx='(?i)artificius[ _]?browser'; Proc=@('ArtificiusUpdater'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Artificius Browser'); Hashes=@('bd62d3808ef29c557da64b412c4422935a641c22e2bdcfe5128c96f2ff5b5e99') },
+
+    # Kingsoft Antivirus / Jinshan Duba: historical PUA sample (2020-08-06).
+    # Source: https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/pua.win32.kingsoft.aw
+    # Observed install: %ProgramFiles%\Kingsoft\Kingsoft Antivirus; Run value kxesc
+    # launches kxetray.exe -autorun. Do not match the shared Kingsoft publisher/root
+    # or kbasesrv alone (a separate homepage-protection component).
+    # Chinese product name is escaped to preserve Windows PowerShell 5.1 encoding.
+    @{ Name='Kingsoft Antivirus'; Label='Kingsoft Antivirus (Jinshan Duba)'; Rx='(?i)(?<![a-z0-9])(?:Kingsoft[ _-]+Antivirus|\u91d1\u5c71\u6bd2\u9738|kxetray(?:\.exe)?)(?![a-z0-9])'; Proc=@('kxetray'); Pub=''; Nw=$false; Harden=@(); Aliases=@('Kingsoft\Kingsoft Antivirus'); RegNames=@('Kingsoft\Kingsoft Antivirus') },
 
     # kingsoft - ajout automatique 2026-10-14 (Hybrid Analysis, verdict malicious, score 100/100).
     #   persistance : HKCU\SOFTWARE\MICROSOFT\WINDOWS\CURRENTVERSION\UNINSTALL\KINGSOFT OFFICE
@@ -1634,7 +1642,9 @@ foreach ($u in $userRoots) {
 
 # --- per-PUA sweep ----------------------------------------------------------
 # PUA definitions live in the $Puas registry near the top of this script.
-foreach ($pua in (@($Puas | Where-Object { $_.Name -eq 'Kingsoft Office' -and $_.AggressiveKingsoft }) + @($Puas | Where-Object { -not ($_.Name -eq 'Kingsoft Office' -and $_.AggressiveKingsoft) }))) {
+# Clean antivirus persistence before the existing full Kingsoft/WPS cleanup
+# removes shared vendor folders and uninstall records.
+foreach ($pua in (@($Puas | Where-Object { $_.Name -eq 'Kingsoft Antivirus' }) + @($Puas | Where-Object { $_.Name -eq 'Kingsoft Office' -and $_.AggressiveKingsoft }) + @($Puas | Where-Object { $_.Name -ne 'Kingsoft Antivirus' -and -not ($_.Name -eq 'Kingsoft Office' -and $_.AggressiveKingsoft) }))) {
     if ($pua.Name -eq 'Kingsoft Office' -and $pua.AggressiveKingsoft) {
         Invoke-KingsoftCleanup -Pua $pua
         continue
