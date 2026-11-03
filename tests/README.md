@@ -92,3 +92,25 @@ Loads only the pure context resolver and verifies automatic behavior for SYSTEM,
 elevated administrators, interactive users, and noninteractive standard accounts.
 It also statically checks that all-profile discovery and UAC decisions use the
 resolved context. It never executes cleanup code.
+
+## `Test-KingsoftAntivirus.ps1`
+
+Runs on macOS or Windows with PowerShell. It loads the dedicated antivirus rule
+and only the isolated sweep/evidence/action functions from **both** removal
+scripts. It never runs either full script, the separate WPS FULL cleanup,
+telemetry, or elevation code.
+
+Windows processes, services, scheduled tasks, shortcuts, and registry entries
+are simulated in memory. Harmless text files in a unique temporary folder test
+actual file selection and deletion; deletion is guarded to stay inside that
+folder. The test checks dry-run immutability, targeted cleanup, preservation of
+WPS and unrelated software, repeated cleanup, and reporting of a simulated file
+removal failure. It restores the environment and removes the fixtures afterward.
+
+```powershell
+pwsh -NoProfile -File tests/Test-KingsoftAntivirus.ps1
+```
+
+This does not validate Windows API behavior, antivirus self-protection, locked
+files or drivers. Those require a disposable Windows VM and a verified sample.
+The Windows CI workflow also runs this simulation under PowerShell 5.1 and 7.

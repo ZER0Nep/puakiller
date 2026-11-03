@@ -140,13 +140,18 @@ $MAL_RX = @(
   'C:\Users\x\AppData\Local\Programs\KitchenCanvas\KitchenCanvas.exe',
   'Shift Browser','ShiftLaunchTask','Shift_hwemja.exe','shift-v147.1.1-web.exe',
   'C:\Users\x\AppData\Local\Shift\chromium\shift.exe',
+  # Trend Micro PUA.Win32.KingSoft.AW: antivirus artifacts, distinct from WPS.
+  'Kingsoft Antivirus','Kingsoft_Antivirus','kxetray.exe',
+  'C:\Program Files\Kingsoft\Kingsoft Antivirus\kxetray.exe',
+  'C:\Program Files (x86)\Kingsoft\Kingsoft Antivirus\service.exe',
+  'kxesc "C:\Program Files\Kingsoft\Kingsoft Antivirus\kxetray.exe" -autorun',
   'PDF Spark','PDFSparkOnSoft','PDFSparkOnSoft.tmp','PDF Spark_is1',
   'C:\Users\x\AppData\Local\Programs\PDF Spark\PDFSparkOnSoft.exe'
 )
 $MAL_PULSE = @('PulseBrowser','Pulse Browser','PulseSoftware','Pulse Software')
-$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor','ShiftBrowser','PDF Spark')
-$MAL_ALIASES = @('OB','Shift')
-$MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor','PDF Spark','PDFSparkOnSoft')
+$MAL_FOLDERS = @('EPISoftware','OneStart.ai','OneStart','ProOneStartHub','OneBrowser','KitchenCanvas','ManualFinder','OpenBook','ConvertMate','PDFEditor','ShiftBrowser','PDF Spark','Kingsoft Antivirus')
+$MAL_ALIASES = @('OB','Shift','Kingsoft\Kingsoft Antivirus')
+$MAL_PROCS = @('epibrowser','onestart','OneBrowser','OBUpdateService','OneBUpdateService','KitchenCanvas','ManualFinderApp','AllManualsReader','OpenBook','ConvertMate','PDFEditor','PDF Spark','PDFSparkOnSoft','kxetray')
 $MAL_HASHES = @(
   'fec95ba8075aafc0ce71c25a566a472821edd8b8e7cc32960a881992ce7ae957',
   '51c9dd59e1f32dd8d2e61ee600e08bdb78d1fc0530dbcd0fccea57ba85037fe4',
@@ -197,6 +202,34 @@ foreach ($s in $MAL_PUBLISHERS){ Check (Match-Signer $s)             "abused sig
 Check (-not (Match-FolderName 'OB')) "short OneBrowser alias 'OB' must not be an unconditional install-folder Name"
 Check (-not (Match-FolderName 'Shift')) "generic Shift alias must not be an unconditional install-folder Name"
 Check (-not (Match-Proc 'shift')) "generic shift process must be matched by its full install path, not by name"
+
+# Assert this rule itself is narrow; the pre-existing WPS rule intentionally
+# removes shared vendor roots, so global Match-Rx cannot express this boundary.
+$antivirus = @($Puas | Where-Object { $_.Name -eq 'Kingsoft Antivirus' })
+Check ($antivirus.Count -eq 1) 'exactly one dedicated Kingsoft Antivirus rule is required'
+if ($antivirus.Count -eq 1) {
+    $av = $antivirus[0]
+    foreach ($text in @('Kingsoft Antivirus','kxetray.exe',
+        'C:\Program Files\Kingsoft\Kingsoft Antivirus\service.exe',
+        'C:\Program Files (x86)\Kingsoft\Kingsoft Antivirus\uninst.exe',
+        'kxesc "C:\Program Files\Kingsoft\Kingsoft Antivirus\kxetray.exe" -autorun')) {
+        Check ($text -match $av.Rx) "antivirus rule must match '$text'"
+    }
+    foreach ($text in @('Kingsoft','Kingsoft Office','WPS Office','wpsnotify.exe','kbasesrv','kxesc',
+        'C:\Program Files\Kingsoft\office6\wps.exe','Kingsoft AntivirusNotes','MyKingsoft Antivirus')) {
+        Check ($text -notmatch $av.Rx) "antivirus rule incorrectly matches '$text'"
+    }
+    $chineseName = -join @([char]0x91d1,[char]0x5c71,[char]0x6bd2,[char]0x9738)
+    Check ($chineseName -match $av.Rx) 'Chinese Kingsoft Antivirus display name must match'
+    Check (-not $av.Pub) 'antivirus must not select all software by Kingsoft publisher'
+    Check ($av.Aliases -notcontains 'Kingsoft') 'antivirus must not delete shared Kingsoft folder alias'
+    Check ($av.RegNames -notcontains 'Kingsoft') 'antivirus must not delete shared Kingsoft registry key'
+    Check (-not $av.Harden) 'antivirus must not deny access to shared vendor folders'
+    foreach ($path in @($Hosted,$Local)) {
+        $source = Get-Content -LiteralPath $path -Raw
+        Check ($source.Contains("@(`$Puas | Where-Object { `$_.Name -eq 'Kingsoft Antivirus' }) + @(`$Puas | Where-Object { `$_.Name -eq 'Kingsoft Office'")) 'antivirus must run before full WPS cleanup'
+    }
+}
 
 Write-Host "== PARITY: both scripts must define identical rules ==" -ForegroundColor Cyan
 $PuasL  = @(Get-ScriptVar -Path $Local -VarName 'Puas')
