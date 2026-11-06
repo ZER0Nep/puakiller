@@ -341,7 +341,7 @@ $Puas = @(
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\GooPDF\Publisher
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\GooPDF\DisplayVersion
     #   rapport     : https://tria.ge/261102-mhfs9aeg53
-    @{ Name='GooPDF'; Label='GooPDF'; Rx='(?i)(?<![a-z0-9])GooPDF(?:Utility)?(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\GooPDF'); RegNames=@('GooPDF'); Hashes=@('af74f8974df1bff1c938a6f8f585cc8b5f370c98d41e7c5f476a4abda3cbfa2e') }
+    @{ Name='GooPDF'; Label='GooPDF'; Rx='(?i)(?<![a-z0-9])GooPDF(?:Utility)?(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\GooPDF'); RegNames=@('GooPDF'); Hashes=@('af74f8974df1bff1c938a6f8f585cc8b5f370c98d41e7c5f476a4abda3cbfa2e','a1ed75d974ebd5135d3cbb6889f96ed8ce63991fc73eeb10898496d7fa3c2628') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
