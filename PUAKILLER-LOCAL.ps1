@@ -341,7 +341,15 @@ $Puas = @(
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\GooPDF\Publisher
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\GooPDF\DisplayVersion
     #   rapport     : https://tria.ge/261102-mhfs9aeg53
-    @{ Name='GooPDF'; Label='GooPDF'; Rx='(?i)(?<![a-z0-9])GooPDF(?:Utility)?(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\GooPDF'); RegNames=@('GooPDF'); Hashes=@('af74f8974df1bff1c938a6f8f585cc8b5f370c98d41e7c5f476a4abda3cbfa2e','a1ed75d974ebd5135d3cbb6889f96ed8ce63991fc73eeb10898496d7fa3c2628') }
+    @{ Name='GooPDF'; Label='GooPDF'; Rx='(?i)(?<![a-z0-9])GooPDF(?:Utility)?(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\GooPDF'); RegNames=@('GooPDF'); Hashes=@('af74f8974df1bff1c938a6f8f585cc8b5f370c98d41e7c5f476a4abda3cbfa2e','a1ed75d974ebd5135d3cbb6889f96ed8ce63991fc73eeb10898496d7fa3c2628') },
+
+    # UFile - ajout automatique 2026-11-17 (tria.ge, verdict suspicious, score 5/10).
+    #   persistance : HKLM\SOFTWARE\Classes\CLSID\{4336a54d-038b-4685-ab02-99bb52d3fb8b}\Instance\
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\UFile
+    #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UFile\DisplayName
+    #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UFile\UninstallString
+    #   rapport     : https://tria.ge/261117-rdsdpscy51
+    @{ Name='UFile'; Label='UFile'; Rx='(?i)(?<![a-z0-9])UFile(?![a-z0-9])'; Proc=@('UFile'); Pub=''; Nw=$false; Harden=@('Local\Programs\UFile'); RegNames=@('UFile'); Hashes=@('6bb5a82d9acd6d846d5ebd928ec8eec8c0ac67cf7a76d3c6b0e225169fd382e3') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
