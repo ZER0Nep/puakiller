@@ -348,7 +348,15 @@ $Puas = @(
     #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UFile\DisplayName
     #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\UFile\UninstallString
     #   rapport     : https://tria.ge/261117-rdsdpscy51
-    @{ Name='UFile'; Label='UFile'; Rx='(?i)(?<![a-z0-9])UFile(?![a-z0-9])'; Proc=@('UFile'); Pub=''; Nw=$false; Harden=@('Local\Programs\UFile'); RegNames=@('UFile'); Hashes=@('6bb5a82d9acd6d846d5ebd928ec8eec8c0ac67cf7a76d3c6b0e225169fd382e3') }
+    @{ Name='UFile'; Label='UFile'; Rx='(?i)(?<![a-z0-9])UFile(?![a-z0-9])'; Proc=@('UFile'); Pub=''; Nw=$false; Harden=@('Local\Programs\UFile'); RegNames=@('UFile'); Hashes=@('6bb5a82d9acd6d846d5ebd928ec8eec8c0ac67cf7a76d3c6b0e225169fd382e3') },
+
+    # MyPdfSoftware - ajout automatique 2026-11-27 (tria.ge, verdict suspicious, score 7/10).
+    #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware\DisplayName
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware\Publisher
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware\DisplayVersion
+    #   rapport     : https://tria.ge/261127-k6cqds1v2r
+    @{ Name='MyPdfSoftware'; Label='My PDF Software'; Rx='(?i)(?<![a-z0-9])(?:MyPdfSoftware|My PDF Software|GooPdf|GooPDF Utility2|mypdfsoftware\.com)(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\MyPdfSoftware','Roaming\Microsoft\Windows\Start Menu\Programs\My PDF Software'); Aliases=@('My PDF Software'); RegNames=@('GooPDF'); Hashes=@('4365f595f7d9626eb25d229efe2d4f8160d9fafc2ed975505c1832df3664c7dd') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
