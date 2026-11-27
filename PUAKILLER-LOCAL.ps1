@@ -357,7 +357,15 @@ $Puas = @(
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware\Publisher
     #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyPdfSoftware\DisplayVersion
     #   rapport     : https://tria.ge/261127-k6cqds1v2r
-    @{ Name='MyPdfSoftware'; Label='My PDF Software'; Rx='(?i)(?<![a-z0-9])(?:MyPdfSoftware|My PDF Software|GooPdf|GooPDF Utility2|mypdfsoftware\.com)(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\MyPdfSoftware','Roaming\Microsoft\Windows\Start Menu\Programs\My PDF Software'); Aliases=@('My PDF Software'); RegNames=@('GooPDF'); Hashes=@('4365f595f7d9626eb25d229efe2d4f8160d9fafc2ed975505c1832df3664c7dd') }
+    @{ Name='MyPdfSoftware'; Label='My PDF Software'; Rx='(?i)(?<![a-z0-9])(?:MyPdfSoftware|My PDF Software|GooPdf|GooPDF Utility2|mypdfsoftware\.com)(?![a-z0-9])'; Proc=@('GooPdf'); Pub=''; Nw=$false; Harden=@('Local\Programs\MyPdfSoftware','Roaming\Microsoft\Windows\Start Menu\Programs\My PDF Software'); Aliases=@('My PDF Software'); RegNames=@('GooPDF'); Hashes=@('4365f595f7d9626eb25d229efe2d4f8160d9fafc2ed975505c1832df3664c7dd') },
+
+    # SolidDocuments - ajout automatique 2026-11-27 (tria.ge, verdict suspicious, score 7/10).
+    #   persistance : HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\{B2C3D4E5-F6A7-4890-B123-456789ABCD12}_is1
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B2C3D4E5-F6A7-4890-B123-456789ABCD12}_is1\Inno Setup: Setup Version
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B2C3D4E5-F6A7-4890-B123-456789ABCD12}_is1\Inno Setup: App Path
+    #   persistance : HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B2C3D4E5-F6A7-4890-B123-456789ABCD12}_is1\InstallLocation
+    #   rapport     : https://tria.ge/261127-le1tkses5t
+    @{ Name='SolidDocuments'; Label='SolidDocuments'; Rx='(?i)(?<![a-z0-9])SolidDocuments(?:\.(?:App|Core|Engine))?(?![a-z0-9])'; Proc=@('SolidDocuments.App'); Pub=''; Nw=$false; Harden=@('Local\Programs\SolidDocuments'); RegNames=@('SolidDocuments'); Hashes=@('e71f26175f0bd7e3ad4b655ad84195fbb50c283a3570486801e2971a721f05a7') }
 )
 $puaBanner = 'Pulse / ' + (($Puas | ForEach-Object { $_.Label } | Where-Object { $_ }) -join ' / ')
 
