@@ -7,7 +7,7 @@ ProOneStart, OneBrowser, ManualFinder, KitchenCanvas, Shift Browser, PDF Spark, 
 Kingsoft Antivirus (Jinshan Duba), and their leftovers.
 
 <!-- stats:start -->
-[![Total fetches](https://img.shields.io/badge/total%20fetches-246-2ea44f)](https://script.nep.red/stat)
+[![Total fetches](https://img.shields.io/badge/total%20fetches-247-2ea44f)](https://script.nep.red/stat)
 <!-- stats:end -->
 
 ## Run
